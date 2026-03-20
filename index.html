@@ -90,6 +90,30 @@ button,input,select,textarea{font-family:var(--fn);}
 .tnav.on{background:var(--acl);color:var(--ac);}
 .tnav svg{width:15px;height:15px;flex-shrink:0;}
 .tb-rr{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.bell-btn{position:relative;padding:7px;border:none;background:none;cursor:pointer;color:var(--tx2);border-radius:var(--rs);transition:all .15s;}
+.bell-btn:hover{background:var(--sur2);color:var(--tx);}
+.bell-btn svg{width:18px;height:18px;display:block;}
+.bell-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--re);border:2px solid var(--sur);display:none;}
+.bell-dot.on{display:block;}
+.notif-panel{position:fixed;top:56px;right:16px;width:340px;background:var(--sur);border:1px solid var(--bor);border-radius:var(--rl);box-shadow:var(--shm);z-index:100;display:none;max-height:480px;overflow:hidden;flex-direction:column;}
+.notif-panel.on{display:flex;}
+.notif-hd{padding:12px 16px;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.notif-hd-tt{font-size:14px;font-weight:600;}
+.notif-list{overflow-y:auto;flex:1;}
+.notif-item{padding:12px 16px;border-bottom:1px solid var(--bor);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start;}
+.notif-item:hover{background:var(--sur2);}
+.notif-item:last-child{border-bottom:none;}
+.notif-item.unread{background:var(--acl);}
+.notif-item.unread:hover{background:#dde8fd;}
+.notif-ic{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.notif-ic.new{background:#dde8fd;}
+.notif-ic.upd{background:var(--grl);}
+.notif-ic.ass{background:#f3e8ff;}
+.notif-body{flex:1;min-width:0;}
+.notif-msg{font-size:13px;color:var(--tx);line-height:1.4;}
+.notif-msg strong{font-weight:600;}
+.notif-ts{font-size:11px;color:var(--tx3);margin-top:3px;}
+.notif-empty{padding:32px 16px;text-align:center;color:var(--tx3);font-size:13px;}
 .upill{display:flex;align-items:center;gap:7px;padding:3px 9px 3px 3px;border-radius:20px;background:var(--sur2);cursor:pointer;border:none;transition:all .15s;}
 .upill:hover{background:var(--sur3);}
 .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:var(--ac);color:white;}
@@ -315,6 +339,19 @@ tbody tr:hover{background:var(--bg);}
     <div class="tb-sp"></div>
     <div class="tbnav" id="tnav"></div>
     <div class="tb-rr">
+      <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel()" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
+        </svg>
+        <span class="bell-dot" id="bell-dot"></span>
+      </button>
+      <div class="notif-panel" id="notif-panel">
+        <div class="notif-hd">
+          <div class="notif-hd-tt">Notifications</div>
+          <button class="btn xs sc" onclick="markAllRead()">Mark all read</button>
+        </div>
+        <div class="notif-list" id="notif-list"><div class="notif-empty">No notifications yet</div></div>
+      </div>
       <button class="upill" onclick="nav('profile')">
         <div class="av" id="tba"></div>
         <div><div class="unm" id="tbnm">—</div><div class="url" id="tbrl">—</div></div>
@@ -432,6 +469,7 @@ async function onAuth(u){
     applyBrand();
     scr('app');
     buildNav();
+    loadNotifs();
     loadData();
     nav('dashboard');
   }else{
@@ -536,6 +574,145 @@ function nav(id){
 }
 
 // ═══════ DATA ═══════
+
+// ═══════ NOTIFICATIONS ═══════
+let notifs = [];       // {id, type, msg, ticketId, ticketNum, ts, read}
+let prevTicketMap = {}; // track previous state for change detection
+let notifOpen = false;
+
+function toggleNotifPanel(){
+  notifOpen = !notifOpen;
+  const panel = G('notif-panel');
+  if(panel) panel.classList.toggle('on', notifOpen);
+  if(notifOpen) renderNotifList();
+}
+
+// Close panel when clicking outside
+document.addEventListener('click', e => {
+  if(notifOpen && !e.target.closest('#bell-btn') && !e.target.closest('#notif-panel')){
+    notifOpen = false;
+    G('notif-panel')?.classList.remove('on');
+  }
+});
+
+function addNotif(type, msg, ticketId, ticketNum){
+  const id = Date.now() + Math.random();
+  notifs.unshift({id, type, msg, ticketId, ticketNum, ts: Date.now(), read: false});
+  if(notifs.length > 50) notifs = notifs.slice(0, 50);
+  // Save to localStorage per user
+  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
+  updateBell();
+  if(notifOpen) renderNotifList();
+}
+
+function loadNotifs(){
+  if(!CU) return;
+  try {
+    const saved = localStorage.getItem('df_notifs_' + CU.uid);
+    if(saved) notifs = JSON.parse(saved);
+  } catch(e){ notifs = []; }
+  updateBell();
+}
+
+function updateBell(){
+  const unread = notifs.filter(n => !n.read).length;
+  const dot = G('bell-dot');
+  if(dot) dot.classList.toggle('on', unread > 0);
+  const btn = G('bell-btn');
+  if(btn) btn.title = unread > 0 ? `${unread} unread notification${unread>1?'s':''}` : 'Notifications';
+}
+
+function renderNotifList(){
+  const list = G('notif-list');
+  if(!list) return;
+  if(!notifs.length){
+    list.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+    return;
+  }
+  list.innerHTML = notifs.map(n => {
+    const typeMap = {
+      assigned: {cls:'ass', icon:'<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>'},
+      updated:  {cls:'upd', icon:'<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>'},
+      comment:  {cls:'new', icon:'<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>'},
+      new:      {cls:'new', icon:'<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>'},
+    };
+    const t = typeMap[n.type] || typeMap.updated;
+    return `<div class="notif-item${n.read?'':' unread'}" onclick="openNotif('${n.id}','${n.ticketId||''}')">
+      <div class="notif-ic ${t.cls}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${n.type==='assigned'?'#6d28d9':n.type==='comment'?'#1D4ED8':'#16A34A'}" stroke-width="2"><path d="${t.icon.match(/d="([^"]+)"/)?.[1]||''}"/></svg>
+      </div>
+      <div class="notif-body">
+        <div class="notif-msg">${n.msg}</div>
+        <div class="notif-ts">${ago(n.ts)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openNotif(nid, ticketId){
+  // Mark as read
+  const n = notifs.find(x => String(x.id) === String(nid));
+  if(n) n.read = true;
+  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
+  updateBell();
+  if(notifOpen) renderNotifList();
+  // Navigate to ticket
+  if(ticketId){
+    notifOpen = false;
+    G('notif-panel')?.classList.remove('on');
+    nav('tickets');
+    setTimeout(() => openDp(ticketId), 200);
+  }
+}
+
+function markAllRead(){
+  notifs.forEach(n => n.read = true);
+  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
+  updateBell();
+  renderNotifList();
+}
+
+function checkTicketChanges(newTickets){
+  if(!CU) return;
+  const uid = CU.uid;
+  newTickets.forEach(t => {
+    const prev = prevTicketMap[t.id];
+    // Skip first load - just build the map
+    if(!prev){
+      prevTicketMap[t.id] = {status:t.status, assignedTo:t.assignedTo, commentCount:(t.comments||[]).length};
+      return;
+    }
+    const num = t.ticketNumber || ('#'+t.id.slice(-6));
+    // 1. Newly assigned to me
+    if(prev.assignedTo !== t.assignedTo && t.assignedTo === uid){
+      addNotif('assigned', `<strong>${num}</strong> was assigned to you`, t.id, num);
+    }
+    // 2. Status changed on my ticket or assigned to me
+    if(prev.status !== t.status && (t.assignedTo === uid || t.createdBy === uid)){
+      const who = t.assignedTo === uid ? 'your assigned ticket' : 'your ticket';
+      addNotif('updated', `Status changed to <strong>${SL[t.status]||t.status}</strong> on ${who} <strong>${num}</strong>`, t.id, num);
+    }
+    // 3. New comment on ticket assigned to me or created by me
+    const newCmtCount = (t.comments||[]).length;
+    if(newCmtCount > prev.commentCount && (t.assignedTo === uid || t.createdBy === uid)){
+      const latestCmt = (t.comments||[]).slice(-1)[0];
+      // Don't notify for my own comments
+      if(latestCmt && latestCmt.authorId !== uid){
+        addNotif('comment', `New reply on <strong>${num}</strong> from ${latestCmt.authorName||'someone'}`, t.id, num);
+      }
+    }
+    // Update map
+    prevTicketMap[t.id] = {status:t.status, assignedTo:t.assignedTo, commentCount:newCmtCount};
+  });
+  // Handle new tickets assigned to me
+  newTickets.forEach(t => {
+    if(!prevTicketMap[t.id] && t.assignedTo === uid && t.autoAssigned){
+      const num = t.ticketNumber || ('#'+t.id.slice(-6));
+      addNotif('new', `New ticket <strong>${num}</strong> assigned to you: ${t.subject}`, t.id, num);
+    }
+  });
+}
+
 function loadData(){
   const role=CP?.role;
   const canM=['admin','manager','agent'].includes(role);
@@ -555,7 +732,9 @@ function loadData(){
   if(role==='user')q=q.where('createdBy','==',CU.uid);
   else if(role==='manager'){const d=CP.departmentId;if(d)q=q.where('departmentId','==',d);}
   q.onSnapshot(s=>{
-    tickets=s.docs.map(d=>({id:d.id,...d.data()}));
+    const newTickets=s.docs.map(d=>({id:d.id,...d.data()}));
+    checkTicketChanges(newTickets);
+    tickets=newTickets;
     if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
   });
   if(['admin','manager'].includes(role))doArchive();
