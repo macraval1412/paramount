@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeskFlow Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F5F4F0;--sur:#FFF;--sur2:#EDECEA;--sur3:#E4E2DE;
+  --bor:#E0DDD8;--bor2:#C8C5BF;--tx:#18170F;--tx2:#6B6860;--tx3:#9E9C98;
+  --ac:#1D4ED8;--acl:#EEF2FE;
+  --re:#DC2626;--rel:#FEF2F2;--am:#D97706;--aml:#FFFBEB;
+  --gr:#16A34A;--grl:#F0FDF4;
+  --fn:'DM Sans',sans-serif;--mo:'DM Mono',monospace;
+  --r:10px;--rs:6px;--rl:14px;
+  --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shm:0 4px 12px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased;}
+h2{font-size:18px;font-weight:600;letter-spacing:-.3px;}h3{font-size:15px;font-weight:500;}
+button,input,select,textarea{font-family:var(--fn);}
+
+/* screens */
+.scr{display:none;min-height:100vh;}.scr.on{display:flex;}
+#sa{align-items:center;justify-content:center;background:linear-gradient(135deg,#1e1b4b,#1D4ED8,#0891b2);}
+.acard{background:var(--sur);border-radius:var(--rl);width:420px;max-width:95vw;overflow:hidden;box-shadow:var(--shm);}
+.ahead{padding:22px 26px 16px;border-bottom:1px solid var(--bor);}
+.alogo{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.alogo-ic{width:34px;height:34px;background:var(--ac);border-radius:9px;display:flex;align-items:center;justify-content:center;}
+.alogo-ic svg{width:17px;height:17px;fill:white;}
+.alogo-nm{font-size:17px;font-weight:700;letter-spacing:-.4px;}
+.alogo-sb{font-size:11px;color:var(--tx3);}
+.ahead-tt{font-size:17px;font-weight:600;margin-bottom:3px;}
+.ahead-sb{font-size:13px;color:var(--tx3);}
+.abody{padding:20px 26px;}
+.atabs{display:flex;gap:3px;background:var(--sur2);border-radius:var(--rs);padding:3px;margin-bottom:16px;}
+.atab{flex:1;padding:6px;border-radius:5px;border:none;background:none;font-size:13px;font-weight:500;cursor:pointer;color:var(--tx2);transition:all .15s;}
+.atab.on{background:white;color:var(--tx);box-shadow:var(--sh);}
+
+/* forms */
+.fg{margin-bottom:13px;}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 11px;border:1px solid var(--bor);border-radius:var(--rs);font-size:13.5px;color:var(--tx);background:var(--sur2);outline:none;transition:all .15s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--ac);background:white;box-shadow:0 0 0 3px rgba(29,78,216,.1);}
+.fg textarea{resize:vertical;min-height:80px;line-height:1.5;}
+.fg .ht{font-size:11.5px;color:var(--tx3);margin-top:4px;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);border:1px solid var(--bor2);background:var(--sur);color:var(--tx);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:var(--sur2);}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.5;pointer-events:none;}
+.btn.pr{background:var(--ac);color:white;border-color:var(--ac);}
+.btn.pr:hover{background:#1e40af;}
+.btn.dn{background:var(--re);color:white;border-color:var(--re);}
+.btn.sc{background:var(--sur2);border-color:var(--bor);}
+.btn.sm{padding:5px 10px;font-size:12px;}
+.btn.xs{padding:3px 8px;font-size:11px;}
+.btn.ic{padding:6px;border:none;background:none;color:var(--tx3);}
+.btn.ic:hover{color:var(--tx);background:var(--sur2);}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+.bw{width:100%;}
+
+/* alerts */
+.ms{border-radius:var(--rs);padding:9px 12px;font-size:13px;margin-bottom:12px;border:1px solid;}
+.ms.er{background:var(--rel);color:#991b1b;border-color:#fca5a5;}
+.ms.in{background:var(--acl);color:#1e40af;border-color:#93c5fd;}
+.ms.wn{background:var(--aml);color:#92400e;border-color:#fcd34d;}
+.ms.ok{background:var(--grl);color:#15803d;border-color:#86efac;}
+
+/* app shell */
+#app{flex-direction:column;}
+.tb{background:var(--sur);border-bottom:1px solid var(--bor);height:52px;display:flex;align-items:center;gap:10px;padding:0 18px;flex-shrink:0;z-index:10;box-shadow:var(--sh);}
+.tb-br{display:flex;align-items:center;gap:8px;flex-shrink:0;cursor:pointer;border:none;background:none;padding:0;}
+.tb-ic{width:27px;height:27px;background:var(--ac);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.tb-ic svg{width:14px;height:14px;fill:white;}
+.tb-nm{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--tx);}
+.tb-sp{width:1px;height:26px;background:var(--bor);flex-shrink:0;}
+.tbnav{display:flex;gap:1px;flex:1;overflow-x:auto;scrollbar-width:none;}
+.tnav{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:var(--rs);border:none;background:none;color:var(--tx2);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.tnav:hover{background:var(--sur2);color:var(--tx);}
+.tnav.on{background:var(--acl);color:var(--ac);}
+.tnav svg{width:15px;height:15px;flex-shrink:0;}
+.tb-rr{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.upill{display:flex;align-items:center;gap:7px;padding:3px 9px 3px 3px;border-radius:20px;background:var(--sur2);cursor:pointer;border:none;transition:all .15s;}
+.upill:hover{background:var(--sur3);}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:var(--ac);color:white;}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+.unm{font-size:12.5px;font-weight:600;}
+.url{font-size:11px;color:var(--tx3);}
+.rb{display:inline-flex;padding:2px 7px;border-radius:4px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.rb-admin{background:#ede9fe;color:#5b21b6;}
+.rb-manager{background:#e0f2fe;color:#0369a1;}
+.rb-agent{background:#dcfce7;color:#15803d;}
+.rb-user{background:var(--sur2);color:var(--tx2);}
+
+/* panels */
+.abody2{display:flex;flex:1;overflow:hidden;}
+.pnl{display:none;flex:1;overflow-y:auto;padding:20px 24px;}
+.pnl.on{display:block;}
+.ph{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.ph h2{flex:1;}
+
+/* stats */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:11px;margin-bottom:20px;}
+.sc{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:15px 17px;box-shadow:var(--sh);}
+.scn{font-size:26px;font-weight:700;letter-spacing:-.7px;line-height:1;}
+.scl{font-size:12px;color:var(--tx3);margin-top:4px;}
+.sc.ca .scn{color:var(--ac);}
+.sc.cr .scn{color:var(--re);}
+.sc.cam .scn{color:var(--am);}
+.sc.cg .scn{color:var(--gr);}
+
+/* charts */
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:20px;}
+.cc{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:16px;box-shadow:var(--sh);}
+.cc.wi{grid-column:1/-1;}
+.cct{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:13px;}
+.ccw{position:relative;height:190px;}
+
+/* card */
+.card{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;}
+.chd{padding:13px 17px;border-bottom:1px solid var(--bor);display:flex;align-items:center;gap:10px;}
+.chd h3{flex:1;}
+.cbd{padding:17px;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:8px 11px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);border-bottom:1px solid var(--bor);white-space:nowrap;}
+tbody td{padding:9px 11px;border-bottom:1px solid var(--bor);font-size:13px;vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--bg);}
+
+/* tickets list */
+.tll{display:flex;gap:14px;}
+.tll-l{flex:1;min-width:0;}
+.tll-r{width:410px;flex-shrink:0;}
+.tkf{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
+.fpls{display:flex;gap:2px;background:var(--sur2);border-radius:var(--rs);padding:3px;}
+.fp{padding:5px 11px;border-radius:5px;border:none;background:none;font-size:12px;font-weight:500;cursor:pointer;color:var(--tx2);transition:all .12s;}
+.fp.on{background:var(--sur);color:var(--tx);box-shadow:var(--sh);}
+.fsl{padding:6px 9px;border:1px solid var(--bor);border-radius:var(--rs);font-size:12px;background:var(--sur);color:var(--tx);cursor:pointer;outline:none;}
+.sb{position:relative;flex:1;min-width:150px;}
+.sb svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--tx3);}
+.sb input{width:100%;padding:6px 9px 6px 28px;border:1px solid var(--bor);border-radius:var(--rs);font-size:13px;background:var(--sur);outline:none;color:var(--tx);}
+.sb input:focus{border-color:var(--ac);}
+.tkl{display:flex;flex-direction:column;gap:5px;}
+.tkr{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:all .12s;display:grid;grid-template-columns:9px 1fr auto;gap:11px;align-items:start;box-shadow:var(--sh);}
+.tkr:hover{border-color:var(--bor2);box-shadow:0 3px 10px rgba(0,0,0,.08);}
+.tkr.sl{border-color:var(--ac);background:#FAFBFF;}
+.pd{width:9px;height:9px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.pd-critical{background:#DC2626;}.pd-high{background:#D97706;}.pd-medium{background:#1D4ED8;}.pd-low{background:#16A34A;}
+.tks{font-size:13px;font-weight:500;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tkm{font-size:11px;color:var(--tx3);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.tkr2{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;}
+.b-open{background:var(--acl);color:#1e40af;}
+.b-pending{background:var(--aml);color:#92400e;}
+.b-in_progress{background:#f3e8ff;color:#6d28d9;}
+.b-resolved{background:var(--grl);color:#15803d;}
+.b-closed{background:var(--sur2);color:var(--tx3);}
+.b-archived{background:var(--sur3);color:var(--tx3);}
+.b-critical{background:var(--rel);color:#991b1b;}
+.b-high{background:var(--aml);color:#92400e;}
+.b-medium{background:var(--acl);color:#1e40af;}
+.b-low{background:var(--grl);color:#15803d;}
+.b-dept{background:#f3e8ff;color:#6d28d9;}
+.tkt{font-size:11px;color:var(--tx3);}
+
+/* detail panel */
+.dp{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);box-shadow:var(--sh);display:flex;flex-direction:column;max-height:calc(100vh - 190px);position:sticky;top:0;}
+.dp.hid{display:none!important;}
+.dph{padding:14px 16px;border-bottom:1px solid var(--bor);flex-shrink:0;}
+.dpid{font-size:11px;font-family:var(--mo);color:var(--tx3);margin-bottom:3px;}
+.dptt{font-size:14px;font-weight:600;line-height:1.3;letter-spacing:-.3px;}
+.dpb{flex:1;overflow-y:auto;padding:14px 16px;}
+.sl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:9px;}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;}
+.mi label{font-size:11px;color:var(--tx3);margin-bottom:2px;display:block;}
+.mi .vl{font-size:13px;font-weight:500;}
+.mi select{width:100%;padding:5px 7px;font-size:12px;border:1px solid var(--bor);border-radius:5px;background:var(--sur2);outline:none;color:var(--tx);}
+.mi select:focus{border-color:var(--ac);}
+.desc{background:var(--sur2);border-radius:var(--rs);padding:11px;font-size:13px;line-height:1.6;color:var(--tx2);margin-bottom:14px;}
+.tline{display:flex;flex-direction:column;gap:11px;}
+.tli{display:flex;gap:9px;}
+.tld{width:8px;height:8px;border-radius:50%;background:var(--bor2);flex-shrink:0;margin-top:4px;}
+.tld.cc{background:var(--ac);}.tld.nn{background:var(--am);}
+.tla{font-weight:500;font-size:12px;}
+.tlt{font-size:11px;color:var(--tx3);}
+.tlx{font-size:13px;color:var(--tx2);margin-top:2px;line-height:1.5;}
+.tlac{font-size:12px;color:var(--tx3);font-style:italic;margin-top:2px;}
+.ra{border-top:1px solid var(--bor);padding:12px 16px;flex-shrink:0;}
+.ra textarea{width:100%;padding:8px 11px;border:1px solid var(--bor);border-radius:var(--rs);font-size:13px;resize:none;min-height:66px;outline:none;background:var(--sur2);line-height:1.5;color:var(--tx);}
+.ra textarea:focus{border-color:var(--ac);background:white;}
+.rar{display:flex;gap:7px;margin-top:8px;align-items:center;}
+.rarr{margin-left:auto;display:flex;gap:6px;}
+
+/* modal */
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px;}
+.mbg.on{display:flex;}
+.modal{background:var(--sur);border-radius:var(--rl);max-width:560px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.2);overflow:hidden;max-height:90vh;display:flex;flex-direction:column;}
+.mhd{padding:17px 21px;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.mtt{font-size:15px;font-weight:600;}
+.mbd{padding:19px 21px;overflow-y:auto;flex:1;}
+.mft{padding:13px 21px;border-top:1px solid var(--bor);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;}
+
+/* admin */
+.adml{display:grid;grid-template-columns:190px 1fr;gap:14px;}
+.admsb{display:flex;flex-direction:column;gap:2px;}
+.an{padding:7px 10px;border-radius:var(--rs);border:none;background:none;font-size:13px;cursor:pointer;color:var(--tx2);text-align:left;display:flex;align-items:center;gap:8px;transition:all .12s;width:100%;font-weight:500;}
+.an:hover{background:var(--sur2);color:var(--tx);}
+.an.on{background:var(--acl);color:var(--ac);}
+.an svg{width:15px;height:15px;flex-shrink:0;}
+.anlbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);padding:10px 10px 4px;}
+
+/* toggle */
+.tgw{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.tg{width:40px;height:22px;border-radius:11px;background:var(--bor2);position:relative;cursor:pointer;border:none;transition:background .2s;flex-shrink:0;}
+.tg.on{background:var(--ac);}
+.tg::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:white;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.tg.on::after{transform:translateX(18px);}
+
+/* upload */
+.uz{border:2px dashed var(--bor2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:all .15s;color:var(--tx3);}
+.uz:hover,.uz.dz{border-color:var(--ac);background:var(--acl);color:var(--ac);}
+
+/* help */
+.hs{margin-bottom:26px;}
+.hs h3{font-size:15px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bor);}
+.hst{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;}
+.hnum{width:24px;height:24px;border-radius:50%;background:var(--ac);color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.hb strong{font-size:13.5px;display:block;margin-bottom:3px;}
+.hb p{font-size:13px;color:var(--tx2);line-height:1.65;}
+.hn{background:var(--aml);border-left:3px solid var(--am);padding:9px 13px;border-radius:0 var(--rs) var(--rs) 0;font-size:13px;color:#92400e;margin-top:8px;}
+.hti{background:var(--grl);border-left:3px solid var(--gr);padding:9px 13px;border-radius:0 var(--rs) var(--rs) 0;font-size:13px;color:#15803d;margin-top:8px;}
+.hi{background:var(--acl);border-left:3px solid var(--ac);padding:9px 13px;border-radius:0 var(--rs) var(--rs) 0;font-size:13px;color:#1e40af;margin-top:8px;}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:10px;margin-top:10px;}
+.rcard{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rs);padding:12px;}
+.rcard .rt{font-weight:600;font-size:13px;margin-bottom:6px;}
+.rcard ul{padding-left:15px;font-size:12.5px;color:var(--tx2);line-height:1.9;}
+
+/* misc */
+.dvd{height:1px;background:var(--bor);margin:14px 0;}
+.empty{text-align:center;padding:46px 20px;color:var(--tx3);}
+.empty svg{width:36px;height:36px;margin:0 auto 11px;display:block;opacity:.2;}
+.empty-t{font-size:14px;font-weight:500;color:var(--tx2);margin-bottom:4px;}
+.ld{display:flex;align-items:center;justify-content:center;padding:36px;gap:9px;color:var(--tx3);}
+.sp{width:18px;height:18px;border:2px solid var(--bor2);border-top-color:var(--ac);border-radius:50%;animation:spi .7s linear infinite;}
+@keyframes spi{to{transform:rotate(360deg);}}
+#tarea{position:fixed;bottom:22px;right:22px;z-index:999;display:flex;flex-direction:column;gap:7px;}
+.toast{background:var(--tx);color:white;padding:9px 15px;border-radius:var(--rs);font-size:13px;font-weight:500;box-shadow:var(--shm);animation:ti .2s ease;max-width:300px;}
+.toast.ok{background:var(--gr);}
+.toast.er{background:var(--re);}
+@keyframes ti{from{transform:translateX(100%);opacity:0;}to{transform:none;opacity:1;}}
+.pbar{height:3px;border-radius:2px;margin-top:5px;background:var(--bor);transition:all .3s;width:0;}
+</style>
+</head>
+<body>
+<div id="tarea"></div>
+
+<!-- AUTH -->
+<div id="sa" class="scr">
+  <div class="acard">
+    <div class="ahead">
+      <div class="alogo">
+        <div class="alogo-ic"><svg viewBox="0 0 16 16"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v5a2 2 0 01-2 2H6l-3 3V4z"/></svg></div>
+        <div><div class="alogo-nm" id="a-nm">DeskFlow Pro</div><div class="alogo-sb" id="a-sb">Support Platform</div></div>
+      </div>
+      <div class="ahead-tt" id="a-tt">Welcome</div>
+      <div class="ahead-sb">Sign in or create your account</div>
+    </div>
+    <div class="abody">
+      <div class="atabs">
+        <button class="atab on" onclick="showTab('li')">Sign In</button>
+        <button class="atab" onclick="showTab('rg')">Register</button>
+      </div>
+      <div id="aerr"></div>
+      <div id="li">
+        <div class="fg"><label>Email</label><input type="email" id="lem" placeholder="you@company.com"></div>
+        <div class="fg"><label>Password</label><input type="password" id="lpw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+          <div style="text-align:right;margin-top:5px"><a href="#" onclick="doForgot();return false" style="font-size:12px;color:var(--tx3)">Forgot password?</a></div>
+        </div>
+        <button class="btn pr bw" onclick="doLogin()">Sign In</button>
+      </div>
+      <div id="rg" style="display:none">
+        <div class="fr">
+          <div class="fg"><label>First Name</label><input type="text" id="rfn" placeholder="First"></div>
+          <div class="fg"><label>Last Name</label><input type="text" id="rln" placeholder="Last"></div>
+        </div>
+        <div class="fg"><label>Email</label><input type="email" id="rem" placeholder="you@company.com"></div>
+        <div class="fg"><label>Password</label>
+          <input type="password" id="rpw" placeholder="Min 8 characters" oninput="pwBar(this.value,'rpb')">
+          <div id="rpb" class="pbar"></div>
+        </div>
+        <button class="btn pr bw" onclick="doReg()">Create Account</button>
+        <p style="font-size:12px;color:var(--tx3);margin-top:10px;text-align:center">An admin will assign your role after registration.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="scr">
+  <div class="tb">
+    <button class="tb-br" onclick="nav('dashboard')">
+      <div class="tb-ic" id="tbi"><svg viewBox="0 0 16 16"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v5a2 2 0 01-2 2H6l-3 3V4z"/></svg></div>
+      <div class="tb-nm" id="tbn">DeskFlow</div>
+    </button>
+    <div class="tb-sp"></div>
+    <div class="tbnav" id="tnav"></div>
+    <div class="tb-rr">
+      <button class="upill" onclick="nav('profile')">
+        <div class="av" id="tba"></div>
+        <div><div class="unm" id="tbnm">—</div><div class="url" id="tbrl">—</div></div>
+      </button>
+      <button class="btn sm sc" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <div class="abody2">
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div id="p-dashboard" class="pnl"></div>
+      <div id="p-tickets" class="pnl"></div>
+      <div id="p-new-ticket" class="pnl"></div>
+      <div id="p-reports" class="pnl"></div>
+      <div id="p-admin" class="pnl"></div>
+      <div id="p-profile" class="pnl"></div>
+      <div id="p-help" class="pnl"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="mbg" id="mbg" onclick="if(event.target===this)closeMod()">
+  <div class="modal">
+    <div class="mhd"><div class="mtt" id="mtt">—</div>
+      <button class="btn ic" onclick="closeMod()"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4.3 4.3a1 1 0 011.4 0L8 6.6l2.3-2.3a1 1 0 111.4 1.4L9.4 8l2.3 2.3a1 1 0 01-1.4 1.4L8 9.4l-2.3 2.3a1 1 0 01-1.4-1.4L6.6 8 4.3 5.7a1 1 0 010-1.4z"/></svg></button>
+    </div>
+    <div class="mbd" id="mbd"></div>
+    <div class="mft"><button class="btn sc" onclick="closeMod()">Cancel</button><button class="btn pr" id="msv">Save</button></div>
+  </div>
+</div>
+<div class="mbg" id="imgbg" onclick="this.classList.remove('on')">
+  <img id="imgsrc" style="max-width:92vw;max-height:88vh;border-radius:var(--r);object-fit:contain;">
+</div>
+
+<script>
+// ═══════ HELPERS (defined first so available everywhere) ═══════
+const G = id => document.getElementById(id);
+const V = id => G(id)?.value?.trim() || '';
+function scr(id) {
+  document.querySelectorAll('.scr').forEach(s => s.classList.remove('on'));
+  G(id)?.classList.add('on');
+}
+function E(id, msg) { if(G(id)) G(id).innerHTML = `<div class="ms er">${msg}</div>`; }
+function ini(n) {
+  if (!n) return '?';
+  return n.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function ago(ts) {
+  if (!ts) return '—';
+  const d = ts?.toDate ? ts.toDate() : new Date(ts);
+  const diff = Date.now() - d.getTime();
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+  if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'2-digit'});
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = ts?.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+function toast(msg, type='') {
+  const c = G('tarea'), t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.style.opacity = '0', 2800);
+  setTimeout(() => t.remove(), 3100);
+}
+function noop() {}
+
+// ═══════ FIREBASE CONFIG ═══════
+const FC = {
+  apiKey: "AIzaSyCLkmtDtT9SiJocMJBDQCcTe5vDQBAI-iI",
+  authDomain: "desk-b09ab.firebaseapp.com",
+  projectId: "desk-b09ab",
+  storageBucket: "desk-b09ab.firebasestorage.app",
+  messagingSenderId: "993895526033",
+  appId: "1:993895526033:web:66b984c1e2880849f2d930"
+};
+
+// ═══════ GLOBALS ═══════
+let db,auth,storage;
+let CU=null,CP=null; // current user / profile
+let curPanel='dashboard',selId=null;
+let tickets=[],users=[],depts=[],cfg={};
+let tvw='all',tdpt='',tpri='';
+let imgPending=null,charts={},modFn=null,admTab='users';
+const ROLES=['admin','manager','agent','user'];
+const RL={admin:'Admin',manager:'Manager',agent:'Agent',user:'User'};
+const ST=['open','pending','in_progress','resolved','closed'];
+const SL={open:'Open',pending:'Pending',in_progress:'In Progress',resolved:'Resolved',closed:'Closed'};
+const PR=['critical','high','medium','low'];
+
+// ═══════ BOOT ═══════
+window.onload=()=>{
+  try{
+    firebase.initializeApp(FC);
+    db=firebase.firestore();auth=firebase.auth();
+    try{storage=firebase.storage();}catch(e){}
+    auth.onAuthStateChanged(onAuth);
+  }catch(e){alert('Firebase init failed: '+e.message);}
+};
+
+async function onAuth(u){
+  if(u){
+    CU=u;
+    await loadCP(u.uid);
+    if(!CP){await wait(1200);await loadCP(u.uid);}
+    if(!CP){await auth.signOut();return;}
+    if(!CP.active){toast('Account deactivated — contact admin','er');await auth.signOut();return;}
+    await loadCfg();
+    applyBrand();
+    scr('app');
+    buildNav();
+    loadData();
+    nav('dashboard');
+  }else{
+    CU=null;CP=null;
+    scr('sa');
+  }
+}
+async function loadCP(uid){const d=await db.collection('users').doc(uid).get();if(d.exists)CP={id:uid,...d.data()};}
+async function loadCfg(){try{const d=await db.collection('settings').doc('system').get();cfg=d.exists?d.data():{};}catch(e){cfg={};}}
+function applyBrand(){
+  const nm=cfg.orgName||'DeskFlow Pro';
+  G('tbn').textContent=nm;G('a-nm').textContent=nm;G('a-tt').textContent='Welcome to '+nm;
+  document.title=nm+' — Support';
+  if(cfg.accentColor){
+    document.documentElement.style.setProperty('--ac',cfg.accentColor);
+    document.documentElement.style.setProperty('--acl',cfg.accentColor+'22');
+  }
+  if(cfg.logoUrl){G('tbi').innerHTML=`<img src="${cfg.logoUrl}" style="width:100%;height:100%;border-radius:7px;object-fit:cover">`;G('tbi').style.background='none';}
+}
+
+// ═══════ AUTH ═══════
+function showTab(t){
+  G('li').style.display=t==='li'?'block':'none';
+  G('rg').style.display=t==='rg'?'block':'none';
+  document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('on',(i===0&&t==='li')||(i===1&&t==='rg')));
+  G('aerr').innerHTML='';
+}
+async function doLogin(){
+  const em=V('lem'),pw=V('lpw');
+  if(!em||!pw)return E('aerr','Enter email and password.');
+  try{await auth.signInWithEmailAndPassword(em,pw);}
+  catch(e){E('aerr',fe(e.code));}
+}
+async function doReg(){
+  const fn=V('rfn'),ln=V('rln'),em=V('rem'),pw=V('rpw');
+  if(!fn||!em||!pw)return E('aerr','Fill in all required fields.');
+  if(pw.length<8)return E('aerr','Password must be at least 8 characters.');
+  try{
+    const c=await auth.createUserWithEmailAndPassword(em,pw);
+    const isFirst=(await db.collection('users').get()).size===0;
+    await db.collection('users').doc(c.user.uid).set({
+      displayName:(fn+' '+ln).trim(),email:em,
+      role:isFirst?'admin':'user',departmentId:'',photoURL:'',active:true,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if(isFirst){
+      await db.collection('settings').doc('system').set({
+        orgName:'DeskFlow Pro',assignMode:'manager',emailNotify:false,
+        uploadEnabled:false,uploadMaxMB:3,archiveEnabled:true,archiveDays:30,deleteDays:60
+      },{merge:true});
+    }
+    toast(isFirst?'Welcome Admin! You\'re all set.':'Account created — an admin will activate you.','ok');
+  }catch(e){E('aerr',fe(e.code));}
+}
+async function doForgot(){
+  const em=V('lem');if(!em)return E('aerr','Enter your email first.');
+  try{await auth.sendPasswordResetEmail(em);G('aerr').innerHTML='<div class="ms ok">Password reset email sent!</div>';}
+  catch(e){E('aerr',fe(e.code));}
+}
+async function doLogout(){await auth.signOut();selId=null;tickets=[];users=[];depts=[];cfg={};}
+function fe(code){return({'auth/wrong-password':'Incorrect password.','auth/user-not-found':'No account with that email.','auth/email-already-in-use':'Email already registered.','auth/too-many-requests':'Too many attempts — try later.','auth/weak-password':'Password too weak (min 8).','auth/invalid-email':'Invalid email.','auth/invalid-credential':'Incorrect email or password.'}[code]||'Error: '+code);}
+function pwBar(pw,id){
+  let s=0;if(pw.length>=8)s++;if(pw.length>=12)s++;if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^a-zA-Z0-9]/.test(pw))s++;
+  const b=G(id);if(!b)return;
+  b.style.background=['#DC2626','#D97706','#D97706','#16A34A','#16A34A'][Math.min(s-1,4)]||'var(--bor)';
+  b.style.width=['20%','35%','55%','80%','100%'][Math.min(s,4)]||'0';
+}
+
+// ═══════ NAV ═══════
+function buildNav(){
+  const role=CP?.role;
+  const items=[
+    {id:'dashboard',lbl:'Dashboard',p:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',r:['admin','manager','agent','user']},
+    {id:'tickets',lbl:'Tickets',p:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',r:['admin','manager','agent','user']},
+    {id:'new-ticket',lbl:'New Ticket',p:'M12 4v16m8-8H4',r:['admin','manager','agent','user']},
+    {id:'reports',lbl:'Reports',p:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',r:['admin','manager']},
+    {id:'admin',lbl:'Admin',p:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z',r:['admin']},
+    {id:'profile',lbl:'My Account',p:'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',r:['admin','manager','agent','user']},
+    {id:'help',lbl:'Help',p:'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',r:['admin','manager','agent','user']},
+  ];
+  G('tnav').innerHTML=items.filter(n=>n.r.includes(role)).map(n=>
+    `<button class="tnav" id="nav-${n.id}" onclick="nav('${n.id}')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${n.p}"/></svg>${n.lbl}
+    </button>`).join('');
+  upUserPill();
+}
+function upUserPill(){
+  if(!CP)return;
+  G('tbnm').textContent=CP.displayName||CP.email;
+  G('tbrl').textContent=RL[CP.role]||'User';
+  const av=G('tba');
+  if(CP.photoURL)av.innerHTML=`<img src="${CP.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+  else av.textContent=ini(CP.displayName||CP.email);
+}
+function nav(id){
+  curPanel=id;
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('on'));
+  G('p-'+id)?.classList.add('on');
+  document.querySelectorAll('.tnav').forEach(n=>n.classList.remove('on'));
+  G('nav-'+id)?.classList.add('on');
+  rPanel(id);
+}
+
+// ═══════ DATA ═══════
+function loadData(){
+  const role=CP?.role;
+  const canM=['admin','manager','agent'].includes(role);
+  // All roles need departments for New Ticket
+  db.collection('departments').onSnapshot(s=>{
+    depts=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(curPanel==='admin')rPanel('admin');
+    if(curPanel==='new-ticket')rPanel('new-ticket');
+  });
+  if(canM){
+    db.collection('users').onSnapshot(s=>{
+      users=s.docs.map(d=>({id:d.id,...d.data()}));
+      if(curPanel==='admin')rPanel('admin');
+    });
+  }
+  let q=db.collection('tickets').orderBy('createdAt','desc');
+  if(role==='user')q=q.where('createdBy','==',CU.uid);
+  else if(role==='manager'){const d=CP.departmentId;if(d)q=q.where('departmentId','==',d);}
+  q.onSnapshot(s=>{
+    tickets=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
+  });
+  if(['admin','manager'].includes(role))doArchive();
+}
+async function doArchive(){
+  const k='df_arch';if(Date.now()-(+localStorage.getItem(k)||0)<3600000)return;
+  localStorage.setItem(k,Date.now());
+  if(cfg.archiveEnabled===false)return;
+  const ad=cfg.archiveDays||30,dd=cfg.deleteDays||60;
+  const ca=new Date();ca.setDate(ca.getDate()-ad);
+  const cd=new Date();cd.setDate(cd.getDate()-dd);
+  try{
+    const s=await db.collection('tickets').get();
+    for(const d of s.docs){
+      const t=d.data(),u=t.updatedAt?.toDate?.()??new Date(0);
+      if(t.status==='archived'&&u<cd)await d.ref.delete();
+      else if(['resolved','closed'].includes(t.status)&&u<ca)
+        await d.ref.update({status:'archived',archivedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+  }catch(e){console.warn('Archive:',e);}
+}
+
+// ═══════ PANEL ROUTER ═══════
+function rPanel(id){
+  const el=G('p-'+id);
+  if(!el||!el.classList.contains('on'))return;
+  ({dashboard:pDash,tickets:pTickets,'new-ticket':pNewTk,reports:pReports,admin:pAdmin,profile:pProfile,help:pHelp}[id]||noop)(el);
+}
+// noop defined above
+
+// ═══════ DASHBOARD ═══════
+function pDash(el){
+  const role=CP?.role;
+  const act=tickets.filter(t=>t.status!=='archived');
+  const open=act.filter(t=>t.status==='open').length;
+  const inprog=act.filter(t=>['pending','in_progress'].includes(t.status)).length;
+  const crit=act.filter(t=>t.priority==='critical').length;
+  const res=tickets.filter(t=>t.status==='resolved').length;
+  const mine=tickets.filter(t=>t.assignedTo===CU.uid&&!['resolved','closed','archived'].includes(t.status));
+  el.innerHTML=`
+    <div class="ph"><h2>Dashboard</h2>
+      <span style="font-size:12px;color:var(--tx3)">${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</span>
+    </div>
+    <div class="sgrid">
+      <div class="sc ca"><div class="scn">${open}</div><div class="scl">Open Tickets</div></div>
+      <div class="sc cam"><div class="scn">${inprog}</div><div class="scl">In Progress</div></div>
+      <div class="sc cr"><div class="scn">${crit}</div><div class="scl">Critical</div></div>
+      <div class="sc cg"><div class="scn">${res}</div><div class="scl">Resolved</div></div>
+      ${['admin','manager'].includes(role)?`<div class="sc"><div class="scn">${act.length}</div><div class="scl">Total Active</div></div><div class="sc"><div class="scn">${users.filter(u=>u.active).length}</div><div class="scl">Active Users</div></div>`:''}
+    </div>
+    <div class="crow">
+      <div class="cc"><div class="cct">By Status</div><div class="ccw"><canvas id="cs"></canvas></div></div>
+      <div class="cc"><div class="cct">By Priority</div><div class="ccw"><canvas id="cp"></canvas></div></div>
+      ${['admin','manager'].includes(role)?`<div class="cc wi"><div class="cct">30-Day Trend</div><div class="ccw"><canvas id="ct"></canvas></div></div>`:''}
+    </div>
+    ${mine.length?`<div class="card"><div class="chd"><h3>Assigned to Me</h3><span class="badge b-open">${mine.length}</span></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Subject</th><th>Department</th><th>Status</th><th>Priority</th><th>Updated</th></tr></thead>
+    <tbody>${mine.slice(0,6).map(t=>{const d=depts.find(x=>x.id===t.departmentId);return`<tr style="cursor:pointer" onclick="nav('tickets');setTimeout(()=>openDp('${t.id}'),80)">
+      <td style="font-family:var(--mo);font-size:11px;color:var(--tx3)">${t.ticketNumber||t.id.slice(-6)}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">${t.subject}</td>
+      <td>${d?`<span class="badge b-dept">${d.name}</span>`:'—'}</td>
+      <td><span class="badge b-${t.status}">${SL[t.status]||t.status}</span></td>
+      <td><span class="badge b-${t.priority}">${t.priority}</span></td>
+      <td>${ago(t.updatedAt)}</td>
+    </tr>`}).join('')}</tbody></table></div></div>`:''}`;
+  setTimeout(()=>{
+    donut('cs',ST.map(s=>SL[s]),ST.map(s=>tickets.filter(t=>t.status===s).length),['#1D4ED8','#D97706','#7C3AED','#16A34A','#9CA3AF']);
+    donut('cp',PR,PR.map(p=>tickets.filter(t=>t.priority===p).length),['#DC2626','#D97706','#1D4ED8','#16A34A']);
+    if(G('ct'))trend('ct');
+  },60);
+}
+function donut(id,lbs,data,colors){
+  kc(id);const c=G(id);if(!c)return;
+  charts[id]=new Chart(c,{type:'doughnut',data:{labels:lbs,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},padding:10}}}}});
+}
+function trend(id){
+  kc(id);const c=G(id);if(!c)return;
+  const lbs=[],cr=[],rs=[];
+  for(let i=29;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    lbs.push(i%5===0?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):'');
+    const s=new Date(d);s.setHours(0,0,0,0);const e=new Date(d);e.setHours(23,59,59,999);
+    cr.push(tickets.filter(t=>{const x=t.createdAt?.toDate?.();return x&&x>=s&&x<=e;}).length);
+    rs.push(tickets.filter(t=>{const x=t.updatedAt?.toDate?.();return x&&x>=s&&x<=e&&['resolved','closed'].includes(t.status);}).length);
+  }
+  charts[id]=new Chart(c,{type:'line',data:{labels:lbs,datasets:[
+    {label:'Created',data:cr,borderColor:'#1D4ED8',backgroundColor:'rgba(29,78,216,.08)',tension:.4,fill:true,pointRadius:0,borderWidth:2},
+    {label:'Resolved',data:rs,borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,.06)',tension:.4,fill:true,pointRadius:0,borderWidth:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'top',labels:{font:{size:11},padding:14}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},stepSize:1}}}}});
+}
+function kc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ═══════ TICKETS ═══════
+function pTickets(el){
+  const canM=['admin','manager','agent'].includes(CP?.role);
+  el.innerHTML=`
+    <div class="ph"><h2>${canM?'All Tickets':'My Tickets'}</h2>
+      <button class="btn pr" onclick="nav('new-ticket')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 010 2H9v4a1 1 0 01-2 0V9H3a1 1 0 010-2h4V3a1 1 0 011-1z"/></svg>New Ticket
+      </button>
+    </div>
+    <div class="tll">
+      <div class="tll-l">
+        <div class="tkf">
+          <div class="fpls">
+            ${['all',...ST,'archived'].map(s=>`<button class="fp${tvw===s?' on':''}" onclick="setVw('${s}')">${s==='all'?'All':s==='archived'?'Archived':(SL[s]||s)}</button>`).join('')}
+          </div>
+          <div class="sb">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+            <input type="search" id="tkq" placeholder="Search tickets…" oninput="relistTk()">
+          </div>
+          ${canM?`<select class="fsl" onchange="tdpt=this.value;relistTk()">
+            <option value="">All Departments</option>
+            ${depts.map(d=>`<option value="${d.id}"${tdpt===d.id?' selected':''}>${d.name}</option>`).join('')}
+          </select>
+          <select class="fsl" onchange="tpri=this.value;relistTk()">
+            <option value="">All Priorities</option>
+            ${PR.map(p=>`<option value="${p}"${tpri===p?' selected':''}>${p}</option>`).join('')}
+          </select>`:''}
+        </div>
+        <div class="tkl" id="tkl">${tkRows(filt())}</div>
+      </div>
+      <div class="tll-r"><div id="dpanel" class="dp hid"></div></div>
+    </div>`;
+  if(selId)openDp(selId);
+}
+function tkRows(list){
+  if(!list.length)return`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><div class="empty-t">No tickets found</div><p>Try adjusting your filters</p></div>`;
+  return list.map(t=>{
+    const dept=depts.find(d=>d.id===t.departmentId);
+    const ass=users.find(u=>u.id===t.assignedTo);
+    return`<div class="tkr${selId===t.id?' sl':''}" onclick="openDp('${t.id}')">
+      <span class="pd pd-${t.priority}"></span>
+      <div style="min-width:0">
+        <div class="tks">${t.subject}</div>
+        <div class="tkm">
+          <span style="font-family:var(--mo);font-size:10.5px">${t.ticketNumber||('#'+t.id.slice(-6))}</span>
+          <span>${t.requesterName||'—'}</span>
+          ${dept?`<span class="badge b-dept" style="padding:1px 5px;font-size:10px">${dept.name}</span>`:''}
+        </div>
+      </div>
+      <div class="tkr2">
+        <span class="badge b-${t.status}">${SL[t.status]||t.status}</span>
+        <span class="badge b-${t.priority}">${t.priority}</span>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span class="tkt">${ago(t.updatedAt)}</span>
+          ${ass?`<div class="av" style="width:20px;height:20px;font-size:9px">${ini(ass.displayName||ass.email)}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function relistTk(){const c=G('tkl');if(c)c.innerHTML=tkRows(filt());}
+function filt(){
+  let t=[...tickets];
+  const q=(G('tkq')?.value||'').toLowerCase();
+  if(q)t=t.filter(x=>x.subject?.toLowerCase().includes(q)||x.requesterName?.toLowerCase().includes(q)||(x.ticketNumber||'').includes(q));
+  if(tvw!=='all')t=t.filter(x=>x.status===tvw);else t=t.filter(x=>x.status!=='archived');
+  if(tdpt)t=t.filter(x=>x.departmentId===tdpt);
+  if(tpri)t=t.filter(x=>x.priority===tpri);
+  return t.sort((a,b)=>(b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0));
+}
+function setVw(v){
+  tvw=v;relistTk();
+  document.querySelectorAll('.fp').forEach(b=>b.classList.toggle('on',b.textContent.trim()===(v==='all'?'All':v==='archived'?'Archived':(SL[v]||v))));
+}
+async function openDp(id){
+  selId=id;relistTk();
+  const dp=G('dpanel');if(!dp)return;
+  dp.classList.remove('hid');dp.innerHTML='<div class="ld"><div class="sp"></div></div>';
+  await renderDp(id);
+}
+async function renderDp(id){
+  const t=tickets.find(x=>x.id===id);const dp=G('dpanel');
+  if(!t||!dp)return;
+  const dept=depts.find(d=>d.id===t.departmentId);
+  const ass=users.find(u=>u.id===t.assignedTo);
+  const role=CP?.role;const canM=['admin','manager','agent'].includes(role);
+  const cmts=(t.comments||[]).sort((a,b)=>(a.createdAt?.toDate?.()?.getTime()||0)-(b.createdAt?.toDate?.()?.getTime()||0));
+  const attH=(t.attachments||[]).length?`<div class="sl" style="margin-top:13px">Attachments</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:13px">${(t.attachments||[]).map(a=>
+      a.type?.startsWith('image/')?`<img src="${a.url}" style="width:72px;height:56px;object-fit:cover;border-radius:var(--rs);border:1px solid var(--bor);cursor:pointer" onclick="G('imgsrc').src='${a.url}';G('imgbg').classList.add('on')">`
+      :`<a href="${a.url}" target="_blank" style="display:flex;align-items:center;gap:5px;padding:5px 9px;background:var(--sur2);border-radius:6px;font-size:12px;text-decoration:none;color:var(--tx)">${a.name}</a>`
+    ).join('')}</div>`:'';
+  dp.innerHTML=`
+    <div class="dph"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div style="min-width:0">
+        <div class="dpid">${t.ticketNumber||t.id.slice(-8)} · ${dept?.name||'No Department'}</div>
+        <div class="dptt">${t.subject}</div>
+      </div>
+      <button class="btn ic" style="flex-shrink:0" onclick="selId=null;G('dpanel').classList.add('hid');relistTk()">
+        <svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M4.3 4.3a1 1 0 011.4 0L8 6.6l2.3-2.3a1 1 0 111.4 1.4L9.4 8l2.3 2.3a1 1 0 01-1.4 1.4L8 9.4l-2.3 2.3a1 1 0 01-1.4-1.4L6.6 8 4.3 5.7a1 1 0 010-1.4z"/></svg>
+      </button>
+    </div></div>
+    <div class="dpb">
+      <div class="sl">Properties</div>
+      <div class="mg">
+        <div class="mi"><label>Status</label>${canM?`<select onchange="updTk('${id}','status',this.value)">${ST.map(s=>`<option value="${s}"${s===t.status?' selected':''}>${SL[s]}</option>`).join('')}</select>`:`<span class="badge b-${t.status}">${SL[t.status]}</span>`}</div>
+        <div class="mi"><label>Priority</label>${canM?`<select onchange="updTk('${id}','priority',this.value)">${PR.map(p=>`<option value="${p}"${p===t.priority?' selected':''}>${p}</option>`).join('')}</select>`:`<span class="badge b-${t.priority}">${t.priority}</span>`}</div>
+        <div class="mi"><label>Department</label>${(canM&&role==='admin')?`<select onchange="updTk('${id}','departmentId',this.value)"><option value="">—</option>${depts.map(d=>`<option value="${d.id}"${d.id===t.departmentId?' selected':''}>${d.name}</option>`).join('')}</select>`:`<div class="vl">${dept?.name||'—'}</div>`}</div>
+        <div class="mi"><label>Assigned To</label>${canM?`<select onchange="updTk('${id}','assignedTo',this.value)"><option value="">Unassigned</option>${users.filter(u=>['admin','manager','agent'].includes(u.role)&&u.active).map(u=>`<option value="${u.id}"${u.id===t.assignedTo?' selected':''}>${u.displayName||u.email}</option>`).join('')}</select>`:`<div class="vl">${ass?.displayName||'—'}</div>`}</div>
+        <div class="mi"><label>Requester</label><div class="vl">${t.requesterName||'—'}</div></div>
+        <div class="mi"><label>Opened</label><div class="vl" style="font-size:12px;color:var(--tx3)">${fmtDate(t.createdAt)}</div></div>
+      </div>
+      <div class="sl">Description</div>
+      <div class="desc">${t.description||'<em style="color:var(--tx3)">No description provided.</em>'}</div>
+      ${attH}
+      <div class="sl">Activity (${cmts.length})</div>
+      <div class="tline">
+        <div class="tli"><div class="tld"></div><div>
+          <div style="display:flex;gap:8px;align-items:baseline"><span class="tla">System</span><span class="tlt">${fmtDate(t.createdAt)}</span></div>
+          <div class="tlac">Ticket created${t.autoAssigned?' · auto-assigned to dept manager':''}</div>
+        </div></div>
+        ${cmts.map(c=>`<div class="tli"><div class="tld ${c.type==='note'?'nn':c.type==='comment'?'cc':''}"></div>
+          <div style="flex:1">
+            <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
+              <span class="tla">${c.authorName||'—'}</span><span class="tlt">${ago(c.createdAt)}</span>
+              ${c.type==='note'?'<span class="badge" style="background:#fffbeb;color:#92400e;font-size:10px;padding:1px 5px">Note</span>':''}
+            </div>
+            <div class="${c.type==='action'?'tlac':'tlx'}">${c.text}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="ra">
+      <textarea id="rp-${id}" placeholder="Write a reply or note…" rows="3"></textarea>
+      <div class="rar">
+        ${canM?`<button class="btn sm sc" onclick="addCmt('${id}','note')">Internal Note</button>`:''}
+        <div class="rarr">
+          ${canM?`<button class="btn sm sc" onclick="updTk('${id}','status','resolved')">Resolve</button>`:''}
+          <button class="btn pr sm" onclick="addCmt('${id}','comment')">Reply</button>
+        </div>
+      </div>
+    </div>`;
+}
+async function updTk(id,field,val){
+  const t=tickets.find(x=>x.id===id);if(!t)return;const old=t[field];
+  await db.collection('tickets').doc(id).update({[field]:val,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  if(old!==val){
+    const lbl={status:'Status',priority:'Priority',departmentId:'Department',assignedTo:'Assignee'}[field]||field;
+    let nv=val;
+    if(field==='status')nv=SL[val]||val;
+    if(field==='departmentId')nv=depts.find(d=>d.id===val)?.name||val||'None';
+    if(field==='assignedTo')nv=users.find(u=>u.id===val)?.displayName||val||'Unassigned';
+    await db.collection('tickets').doc(id).update({comments:firebase.firestore.FieldValue.arrayUnion({text:`${lbl} changed to ${nv}`,type:'action',authorName:CP.displayName||CP.email,authorId:CU.uid,createdAt:firebase.firestore.Timestamp.now()})});
+  }
+  toast('Updated','ok');
+}
+async function addCmt(id,type){
+  const ta=G('rp-'+id);const text=ta?.value?.trim();if(!text)return;
+  await db.collection('tickets').doc(id).update({
+    comments:firebase.firestore.FieldValue.arrayUnion({text,type,authorName:CP.displayName||CP.email,authorId:CU.uid,createdAt:firebase.firestore.Timestamp.now()}),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });ta.value='';toast('Added','ok');
+}
+
+// ═══════ NEW TICKET ═══════
+function pNewTk(el){
+  const canM=['admin','manager','agent'].includes(CP?.role);
+  const upOn=cfg.uploadEnabled===true;const maxMB=cfg.uploadMaxMB||3;
+  imgPending=null;
+  el.innerHTML=`
+    <div class="ph"><h2>New Ticket</h2></div>
+    <div style="max-width:660px"><div class="card"><div class="cbd">
+      <div id="nterr"></div>
+      <div class="fg"><label>Subject *</label><input type="text" id="ntsubj" placeholder="Brief summary of the issue"></div>
+      <div class="fg"><label>Description</label><textarea id="ntdesc" placeholder="Provide details, steps to reproduce, expected vs actual behaviour…" rows="5"></textarea></div>
+      <div class="fr">
+        <div class="fg"><label>Your Name</label><input type="text" id="ntnm" value="${CP?.displayName||''}"></div>
+        <div class="fg"><label>Priority</label>
+          <select id="ntpri">
+            <option value="low">Low — minor issue</option>
+            <option value="medium" selected>Medium — standard</option>
+            <option value="high">High — significant impact</option>
+            <option value="critical">Critical — system down</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Department *</label>
+        <select id="ntdept" onchange="onDept(this.value)">
+          <option value="">— Select a department —</option>
+          ${depts.map(d=>`<option value="${d.id}">${d.name}${d.description?' — '+d.description:''}</option>`).join('')}
+        </select>
+        ${depts.length===0?'<div class="ms wn" style="margin-top:8px">No departments set up yet — ask your admin to create departments first.</div>':''}
+      </div>
+      <div id="dpthint" style="display:none" class="ms in"></div>
+      ${canM?`<div class="fg"><label>Override Assignee <span style="font-weight:400;color:var(--tx3);font-size:11px">(optional — defaults to dept manager)</span></label>
+        <select id="ntassign"><option value="">Auto-assign to dept manager</option>
+        ${users.filter(u=>['admin','manager','agent'].includes(u.role)&&u.active).map(u=>`<option value="${u.id}">${u.displayName||u.email} (${RL[u.role]||u.role})</option>`).join('')}</select>
+      </div>`:''}
+      ${upOn?`<div class="fg">
+        <label>Attachment <span style="font-weight:400;color:var(--tx3);font-size:11px">(1 image, max ${maxMB}MB)</span></label>
+        <div class="uz" onclick="G('ntfile').click()" ondragover="event.preventDefault();this.classList.add('dz')" ondragleave="this.classList.remove('dz')" ondrop="doDrop(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:26px;height:26px;margin:0 auto 8px;display:block"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6h.1a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          <div style="font-size:13px;font-weight:500">Click or drag an image here</div>
+          <div style="font-size:12px;margin-top:3px">JPG, PNG, GIF · max ${maxMB}MB</div>
+        </div>
+        <input type="file" id="ntfile" accept="image/*" style="display:none" onchange="pickImg(this.files[0])">
+        <div id="ntprev" style="margin-top:10px"></div>
+      </div>`:''}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn sc" onclick="nav('tickets')">Cancel</button>
+        <button class="btn pr" id="ntbtn" onclick="submitTk()">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M14.7 2.7a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L6 10l7.3-7.3a1 1 0 011.4 0z"/></svg>
+          Submit Ticket
+        </button>
+      </div>
+    </div></div></div>`;
+}
+function onDept(deptId){
+  const h=G('dpthint');if(!h)return;
+  if(!deptId){h.style.display='none';return;}
+  const d=depts.find(x=>x.id===deptId);if(!d){h.style.display='none';return;}
+  const mode=cfg.assignMode||'manager';
+  let msg='';
+  if(mode==='queue'&&d.queueManagerId){const qm=users.find(u=>u.id===d.queueManagerId);msg=`Will be routed to queue manager <strong>${qm?.displayName||qm?.email||'—'}</strong>.`;}
+  else if(d.managerId){const mgr=users.find(u=>u.id===d.managerId);msg=`Will be auto-assigned to <strong>${mgr?.displayName||mgr?.email||'—'}</strong> (${d.name} Manager).`;}
+  else{msg=`Will be placed in the <strong>${d.name}</strong> queue — no manager configured yet.`;}
+  h.innerHTML=msg;h.style.display='block';
+}
+function pickImg(f){
+  if(!f)return;const maxMB=cfg.uploadMaxMB||3;
+  if(!f.type.startsWith('image/')){toast('Only image files accepted','er');return;}
+  if(f.size>maxMB*1024*1024){toast(`File exceeds ${maxMB}MB limit`,'er');return;}
+  imgPending=f;const prev=G('ntprev');if(!prev)return;
+  const r=new FileReader();
+  r.onload=e=>{prev.innerHTML=`<div style="position:relative;display:inline-block"><img src="${e.target.result}" style="width:80px;height:64px;object-fit:cover;border-radius:var(--rs);border:1px solid var(--bor)"><button style="position:absolute;top:-5px;right:-5px;width:17px;height:17px;border-radius:50%;background:var(--re);color:white;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" onclick="imgPending=null;G('ntprev').innerHTML='';G('ntfile').value=''">×</button></div>`;};
+  r.readAsDataURL(f);
+}
+function doDrop(e){e.preventDefault();document.querySelector('.uz')?.classList.remove('dz');pickImg(e.dataTransfer.files[0]);}
+async function submitTk(){
+  const subj=V('ntsubj');if(!subj){G('nterr').innerHTML='<div class="ms er">Subject is required.</div>';return;}
+  const deptId=G('ntdept')?.value||'';if(!deptId){G('nterr').innerHTML='<div class="ms er">Please select a department.</div>';return;}
+  const btn=G('ntbtn');btn.disabled=true;btn.textContent='Submitting…';
+  try{
+    const dept=depts.find(d=>d.id===deptId);
+    const mode=cfg.assignMode||'manager';
+    let assignedTo=G('ntassign')?.value||'';let autoAssigned=false;
+    if(!assignedTo&&dept){
+      if(mode==='queue'&&dept.queueManagerId){assignedTo=dept.queueManagerId;autoAssigned=true;}
+      else if(dept.managerId){assignedTo=dept.managerId;autoAssigned=true;}
+    }
+    const atts=[];
+    if(imgPending&&storage&&cfg.uploadEnabled){
+      const ref=storage.ref(`tickets/${Date.now()}_${imgPending.name}`);
+      await ref.put(imgPending);const url=await ref.getDownloadURL();
+      atts.push({name:imgPending.name,url,type:imgPending.type});
+    }
+    const cnt=(await db.collection('tickets').get()).size+1;
+    const tk={
+      ticketNumber:`TK-${String(cnt).padStart(4,'0')}`,subject:subj,description:V('ntdesc'),
+      requesterName:V('ntnm')||CP?.displayName||'',requesterEmail:CP?.email||'',createdBy:CU.uid,
+      priority:G('ntpri')?.value||'medium',departmentId:deptId,assignedTo,autoAssigned,
+      status:'open',attachments:atts,comments:[],
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const ref=await db.collection('tickets').add(tk);
+    if(autoAssigned&&dept&&cfg.emailNotify!==false){
+      const mgrEm=dept.managerEmail||(users.find(u=>u.id===assignedTo)?.email);
+      if(mgrEm)sendEm(mgrEm,tk.ticketNumber,subj,tk.priority,dept.name);
+    }
+    toast(`Ticket ${tk.ticketNumber} submitted!`,'ok');imgPending=null;
+    nav('tickets');setTimeout(()=>openDp(ref.id),400);
+  }catch(e){G('nterr').innerHTML=`<div class="ms er">${e.message}</div>`;btn.disabled=false;btn.textContent='Submit Ticket';}
+}
+function sendEm(to,num,subj,prio,dept){
+  const sid=cfg.emailjsServiceId,tid=cfg.emailjsTemplateId,key=cfg.emailjsPublicKey;
+  if(sid&&tid&&key){
+    const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    s.onload=()=>{emailjs.init(key);emailjs.send(sid,tid,{to_email:to,ticket_number:num,subject:subj,priority:prio,department:dept}).then(()=>toast('Manager notified','ok')).catch(e=>console.warn('EmailJS:',e));};
+    document.head.appendChild(s);
+  }else{
+    console.info(`📧 NOTIFY → ${to}: [${prio.toUpperCase()}] ${num} — ${subj} (${dept})`);
+    toast(`Notification queued for ${dept} manager`,'ok');
+  }
+}
+
+// ═══════ REPORTS ═══════
+function pReports(el){
+  const total=tickets.filter(t=>t.status!=='archived').length;
+  const open=tickets.filter(t=>t.status==='open').length;
+  const res=tickets.filter(t=>['resolved','closed'].includes(t.status)).length;
+  const crit=tickets.filter(t=>t.priority==='critical'&&!['resolved','closed','archived'].includes(t.status)).length;
+  const rate=total?Math.round(res/total*100):0;
+  const byD=depts.map(d=>{const dt=tickets.filter(t=>t.departmentId===d.id&&t.status!=='archived');return{name:d.name,total:dt.length,open:dt.filter(t=>t.status==='open').length,res:dt.filter(t=>['resolved','closed'].includes(t.status)).length};}).filter(d=>d.total>0);
+  const byA=users.filter(u=>['admin','manager','agent'].includes(u.role)).map(u=>{const at=tickets.filter(t=>t.assignedTo===u.id&&t.status!=='archived');return{name:u.displayName||u.email,total:at.length,res:at.filter(t=>['resolved','closed'].includes(t.status)).length,open:at.filter(t=>t.status==='open').length};}).filter(a=>a.total>0).sort((a,b)=>b.total-a.total);
+  el.innerHTML=`
+    <div class="ph"><h2>Reports &amp; Analytics</h2><span style="font-size:12px;color:var(--tx3)">Executive Summary</span></div>
+    <div class="sgrid">
+      <div class="sc"><div class="scn">${total}</div><div class="scl">Total Active</div></div>
+      <div class="sc ca"><div class="scn">${open}</div><div class="scl">Open</div></div>
+      <div class="sc cg"><div class="scn">${res}</div><div class="scl">Resolved</div></div>
+      <div class="sc cr"><div class="scn">${crit}</div><div class="scl">Critical</div></div>
+      <div class="sc ${rate>=70?'cg':rate>=40?'cam':'cr'}"><div class="scn">${rate}%</div><div class="scl">Resolution Rate</div></div>
+    </div>
+    <div class="crow">
+      <div class="cc"><div class="cct">By Status</div><div class="ccw"><canvas id="rs"></canvas></div></div>
+      <div class="cc"><div class="cct">By Priority</div><div class="ccw"><canvas id="rp"></canvas></div></div>
+    </div>
+    ${byD.length?`<div class="card" style="margin-bottom:14px"><div class="chd"><h3>Department Breakdown</h3></div><div style="overflow-x:auto"><table><thead><tr><th>Department</th><th>Total</th><th>Open</th><th>Resolved</th><th>Rate</th></tr></thead><tbody>${byD.map(d=>`<tr><td><strong>${d.name}</strong></td><td>${d.total}</td><td><span class="badge b-open">${d.open}</span></td><td><span class="badge b-resolved">${d.res}</span></td><td>${d.total?Math.round(d.res/d.total*100):0}%</td></tr>`).join('')}</tbody></table></div></div>`:''}
+    ${byA.length?`<div class="card"><div class="chd"><h3>Agent Performance</h3></div><div style="overflow-x:auto"><table><thead><tr><th>Agent</th><th>Assigned</th><th>Open</th><th>Resolved</th><th>Rate</th></tr></thead><tbody>${byA.map(a=>`<tr><td><strong>${a.name}</strong></td><td>${a.total}</td><td>${a.open}</td><td>${a.res}</td><td>${a.total?Math.round(a.res/a.total*100):0}%</td></tr>`).join('')}</tbody></table></div></div>`:''}`;
+  setTimeout(()=>{
+    donut('rs',ST.map(s=>SL[s]),ST.map(s=>tickets.filter(t=>t.status===s).length),['#1D4ED8','#D97706','#7C3AED','#16A34A','#9CA3AF']);
+    donut('rp',PR,PR.map(p=>tickets.filter(t=>t.priority===p&&t.status!=='archived').length),['#DC2626','#D97706','#1D4ED8','#16A34A']);
+  },60);
+}
+
+// ═══════ ADMIN ═══════
+function pAdmin(el){
+  el.innerHTML=`
+    <div class="ph"><h2>Admin Panel</h2></div>
+    <div class="adml">
+      <div class="admsb">
+        <div class="anlbl">Manage</div>
+        ${[['users','Users','M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8z'],
+           ['departments','Departments','M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10'],
+           ['branding','Branding','M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343']].map(([id,lbl,ico])=>
+          `<button class="an${admTab===id?' on':''}" onclick="admTab='${id}';G('admc').innerHTML='<div class=ld><div class=sp></div></div>';setTimeout(()=>admSec('${id}'),10)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${ico}"/></svg>${lbl}
+          </button>`).join('')}
+        <div class="anlbl">Settings</div>
+        ${[['assignment','Assignment','M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
+           ['email','Email Notify','M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+           ['uploads','File Uploads','M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'],
+           ['retention','Data Retention','M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'],
+           ['security','Security','M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z']].map(([id,lbl,ico])=>
+          `<button class="an${admTab===id?' on':''}" onclick="admTab='${id}';G('admc').innerHTML='<div class=ld><div class=sp></div></div>';setTimeout(()=>admSec('${id}'),10)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${ico}"/></svg>${lbl}
+          </button>`).join('')}
+      </div>
+      <div id="admc"><div class="ld"><div class="sp"></div></div></div>
+    </div>`;
+  admSec(admTab);
+}
+function admSec(tab){
+  const c=G('admc');if(!c)return;
+  ({users:admUsers,departments:admDepts,branding:admBrand,assignment:admAssign,email:admEmail,uploads:admUploads,retention:admRet,security:admSec2}[tab]||noop)(c);
+}
+function admUsers(c){
+  c.innerHTML=`<div class="card"><div class="chd"><h3>Users (${users.length})</h3><button class="btn pr sm" onclick="openUserMod()">+ Add User</button></div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
+  <tbody>${users.sort((a,b)=>(a.displayName||a.email).localeCompare(b.displayName||b.email)).map(u=>{
+    const dept=depts.find(d=>d.id===u.departmentId);
+    return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;font-size:10px">${ini(u.displayName||u.email)}</div><span style="font-weight:500">${u.displayName||'—'}</span></div></td>
+    <td style="font-size:12px;color:var(--tx2)">${u.email}</td>
+    <td><span class="rb rb-${u.role}">${RL[u.role]||u.role}</span></td>
+    <td style="font-size:12.5px">${dept?.name||'—'}</td>
+    <td><span class="badge ${u.active?'b-resolved':'b-closed'}">${u.active?'Active':'Inactive'}</span></td>
+    <td><div style="display:flex;gap:4px"><button class="btn xs sc" onclick="openUserMod('${u.id}')">Edit</button><button class="btn xs sc" onclick="sendPwReset('${u.email}')">↺ PW</button>${u.id!==CU.uid?`<button class="btn xs ${u.active?'dn':'sc'}" onclick="togUser('${u.id}',${!u.active})">${u.active?'Deactivate':'Activate'}</button>`:''}</div></td>
+    </tr>`;}).join('')}</tbody></table></div></div>`;
+}
+async function sendPwReset(em){await auth.sendPasswordResetEmail(em);toast('Password reset sent to '+em,'ok');}
+async function togUser(uid,val){await db.collection('users').doc(uid).update({active:val});toast(`User ${val?'activated':'deactivated'}`,'ok');}
+
+function admDepts(c){
+  c.innerHTML=`<div class="card"><div class="chd"><h3>Departments (${depts.length})</h3><button class="btn pr sm" onclick="openDeptMod()">+ Add Department</button></div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Manager</th><th>Manager Email</th><th>Queue Manager</th><th>Open</th><th>Actions</th></tr></thead>
+  <tbody>${depts.length===0?`<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:24px">No departments yet — create one to start routing tickets.</td></tr>`:
+  depts.map(d=>{
+    const mgr=users.find(u=>u.id===d.managerId);const qm=users.find(u=>u.id===d.queueManagerId);
+    const oc=tickets.filter(t=>t.departmentId===d.id&&t.status==='open').length;
+    return`<tr><td><div style="font-weight:600">${d.name}</div>${d.description?`<div style="font-size:11.5px;color:var(--tx3)">${d.description}</div>`:''}</td>
+    <td>${mgr?mgr.displayName||mgr.email:'<span style="color:var(--tx3)">—</span>'}</td>
+    <td style="font-size:12px;color:var(--tx2)">${d.managerEmail||mgr?.email||'—'}</td>
+    <td>${qm?qm.displayName||qm.email:'<span style="color:var(--tx3)">—</span>'}</td>
+    <td><span class="badge b-open">${oc}</span></td>
+    <td><div style="display:flex;gap:4px"><button class="btn xs sc" onclick="openDeptMod('${d.id}')">Edit</button><button class="btn xs dn" onclick="delDept('${d.id}')">Delete</button></div></td></tr>`;
+  }).join('')}</tbody></table></div></div>`;
+}
+function admBrand(c){
+  c.innerHTML=`<div class="card"><div class="chd"><h3>Branding</h3></div><div class="cbd">
+    <div class="ms in">Changes apply immediately for all users.</div>
+    <div class="fg"><label>Organisation Name</label><input type="text" id="brnm" value="${cfg.orgName||'DeskFlow Pro'}"></div>
+    <div class="fg"><label>Accent Colour</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">${['#1D4ED8','#7C3AED','#0D9488','#DC2626','#D97706','#16A34A','#DB2777','#0284C7'].map(col=>`<button onclick="G('brcol').value='${col}'" style="width:26px;height:26px;border-radius:6px;background:${col};border:${(cfg.accentColor||'#1D4ED8')===col?'3px solid #000':'1px solid var(--bor)'};cursor:pointer"></button>`).join('')}</div>
+      <input type="text" id="brcol" value="${cfg.accentColor||'#1D4ED8'}" placeholder="#1D4ED8" style="font-family:var(--mo);width:160px">
+    </div>
+    <button class="btn pr" onclick="saveBrand()">Save Branding</button>
+  </div></div>`;
+}
+async function saveBrand(){const u={orgName:V('brnm'),accentColor:V('brcol')||'#1D4ED8'};await db.collection('settings').doc('system').set(u,{merge:true});Object.assign(cfg,u);applyBrand();toast('Branding saved','ok');}
+function admAssign(c){c.innerHTML=`<div class="card"><div class="chd"><h3>Ticket Assignment</h3></div><div class="cbd">
+  <div class="fg"><label>Default Assignment Mode</label>
+    <select id="asmode"><option value="manager"${(cfg.assignMode||'manager')==='manager'?' selected':''}>Assign to Department Manager (default)</option><option value="queue"${cfg.assignMode==='queue'?' selected':''}>Assign to Queue Manager (per department)</option><option value="none"${cfg.assignMode==='none'?' selected':''}>Leave unassigned — manual routing</option></select>
+    <div class="ht">Queue Manager is set per-department in the Departments tab.</div>
+  </div>
+  <button class="btn pr" onclick="saveSCfg({assignMode:G('asmode').value})">Save</button>
+</div></div>`;}
+function admEmail(c){c.innerHTML=`<div class="card"><div class="chd"><h3>Email Notifications</h3></div><div class="cbd">
+  <div class="tgw"><button class="tg${cfg.emailNotify!==false?' on':''}" id="tgem" onclick="this.classList.toggle('on')"></button><span style="font-size:13px;color:var(--tx2)">Notify dept manager on new ticket assignment</span></div>
+  <div class="dvd"></div>
+  <p style="font-size:13px;font-weight:500;margin-bottom:8px">EmailJS Integration <span style="font-weight:400;font-size:12px;color:var(--tx3)">(free: 200/month)</span></p>
+  <div class="ms in">Register at <a href="https://emailjs.com" target="_blank" style="color:var(--ac)">emailjs.com</a>. Template vars: <code>to_email</code> <code>ticket_number</code> <code>subject</code> <code>priority</code> <code>department</code></div>
+  <div class="fr" style="margin-top:10px">
+    <div class="fg"><label>Service ID</label><input type="text" id="ejs" value="${cfg.emailjsServiceId||''}" placeholder="service_abc"></div>
+    <div class="fg"><label>Template ID</label><input type="text" id="ejt" value="${cfg.emailjsTemplateId||''}" placeholder="template_xyz"></div>
+  </div>
+  <div class="fg"><label>Public Key</label><input type="text" id="ejk" value="${cfg.emailjsPublicKey||''}" placeholder="your_public_key"></div>
+  <button class="btn pr" onclick="saveSCfg({emailNotify:G('tgem').classList.contains('on'),emailjsServiceId:V('ejs'),emailjsTemplateId:V('ejt'),emailjsPublicKey:V('ejk')})">Save</button>
+</div></div>`;}
+function admUploads(c){c.innerHTML=`<div class="card"><div class="chd"><h3>File Uploads</h3></div><div class="cbd">
+  <div class="tgw"><button class="tg${cfg.uploadEnabled===true?' on':''}" id="tgup" onclick="this.classList.toggle('on')"></button><span style="font-size:13px;color:var(--tx2)">Allow users to attach one image per ticket</span></div>
+  <div class="fg" style="margin-top:10px"><label>Max image size</label><select id="smb">${[1,2,3,5].map(n=>`<option value="${n}"${(cfg.uploadMaxMB||3)===n?' selected':''}>${n} MB</option>`).join('')}</select></div>
+  <div class="ms wn">Requires Firebase Storage enabled. Disabled by default.</div>
+  <button class="btn pr" onclick="saveSCfg({uploadEnabled:G('tgup').classList.contains('on'),uploadMaxMB:parseInt(G('smb').value)||3})">Save</button>
+</div></div>`;}
+function admRet(c){c.innerHTML=`<div class="card"><div class="chd"><h3>Data Retention</h3></div><div class="cbd">
+  <div class="tgw"><button class="tg${cfg.archiveEnabled!==false?' on':''}" id="tgarc" onclick="this.classList.toggle('on')"></button><span style="font-size:13px;color:var(--tx2)">Auto-archive resolved tickets, then delete</span></div>
+  <div class="fr" style="margin-top:12px">
+    <div class="fg"><label>Archive resolved after</label><select id="sad">${[7,14,30,60,90].map(n=>`<option value="${n}"${(cfg.archiveDays||30)===n?' selected':''}>${n} days</option>`).join('')}</select></div>
+    <div class="fg"><label>Delete archived after</label><select id="sdd">${[30,60,90,180,365].map(n=>`<option value="${n}"${(cfg.deleteDays||60)===n?' selected':''}>${n} days</option>`).join('')}</select></div>
+  </div>
+  <div class="ms wn">Archive job runs hourly. Deletion is permanent.</div>
+  <button class="btn pr" onclick="saveSCfg({archiveEnabled:G('tgarc').classList.contains('on'),archiveDays:parseInt(G('sad').value)||30,deleteDays:parseInt(G('sdd').value)||60})">Save</button>
+</div></div>`;}
+function admSec2(c){c.innerHTML=`<div class="card"><div class="chd"><h3>Security</h3></div><div class="cbd">
+  <div class="ms ok">✓ Firebase Auth uses JWT tokens. Passwords are hashed server-side (bcrypt). All traffic is HTTPS/TLS.</div>
+  <div class="dvd"></div>
+  <p style="font-size:13px;font-weight:500;margin-bottom:8px">Recommended Firestore Security Rules</p>
+  <pre style="background:var(--sur2);border:1px solid var(--bor);border-radius:var(--rs);padding:13px;font-size:11.5px;overflow-x:auto;line-height:1.6">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /tickets/{id}      { allow read,write: if request.auth != null; }
+    match /users/{uid}       { allow read: if request.auth != null;
+                               allow write: if request.auth.uid==uid || isAdmin(); }
+    match /departments/{id}  { allow read: if request.auth != null; allow write: if isAdmin(); }
+    match /settings/{id}     { allow read: if request.auth != null; allow write: if isAdmin(); }
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role=='admin';
+    }
+  }
+}</pre>
+</div></div>`;}
+async function saveSCfg(u){await db.collection('settings').doc('system').set(u,{merge:true});Object.assign(cfg,u);toast('Saved','ok');}
+
+// ─── User Modal ───
+function openUserMod(uid){
+  const u=uid?users.find(x=>x.id===uid):null;
+  openMod(`${u?'Edit':'Add'} User`,`
+    <div id="umerr"></div>
+    <div class="fr"><div class="fg"><label>First Name *</label><input type="text" id="umfn" value="${u?.displayName?.split(' ')[0]||''}"></div><div class="fg"><label>Last Name</label><input type="text" id="umln" value="${u?.displayName?.split(' ').slice(1).join(' ')||''}"></div></div>
+    <div class="fg"><label>Email *</label><input type="email" id="umem" value="${u?.email||''}" ${u?'readonly style="background:var(--sur2)"':''}></div>
+    ${!u?'<div class="fg"><label>Password *</label><input type="password" id="umpw" placeholder="Min 8 characters"></div>':''}
+    <div class="fr">
+      <div class="fg"><label>Role</label><select id="umrole">${ROLES.map(r=>`<option value="${r}"${r===(u?.role||'user')?' selected':''}>${RL[r]}</option>`).join('')}</select></div>
+      <div class="fg"><label>Department</label><select id="umdept"><option value="">— None —</option>${depts.map(d=>`<option value="${d.id}"${d.id===u?.departmentId?' selected':''}>${d.name}</option>`).join('')}</select></div>
+    </div>`,async()=>{
+    const fn=V('umfn'),em=V('umem');
+    if(!fn||!em){G('umerr').innerHTML='<div class="ms er">Name and email are required.</div>';return false;}
+    const data={displayName:(fn+' '+V('umln')).trim(),role:G('umrole').value,departmentId:G('umdept').value,active:true};
+    if(u){await db.collection('users').doc(u.id).update(data);toast('User updated','ok');}
+    else{
+      const pw=V('umpw');if(!pw||pw.length<8){G('umerr').innerHTML='<div class="ms er">Password must be 8+ characters.</div>';return false;}
+      try{
+        const sec=firebase.initializeApp(firebase.app().options,'sec-'+Date.now());
+        const sa=firebase.auth(sec);const c=await sa.createUserWithEmailAndPassword(em,pw);
+        await db.collection('users').doc(c.user.uid).set({...data,email:em,photoURL:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        await sa.signOut();await sec.delete();toast('User created','ok');
+      }catch(e){G('umerr').innerHTML=`<div class="ms er">${e.message}</div>`;return false;}
+    }
+    return true;
+  });
+}
+// ─── Dept Modal ───
+function openDeptMod(did){
+  const d=did?depts.find(x=>x.id===did):null;
+  const elig=users.filter(u=>['admin','manager','agent'].includes(u.role)&&u.active);
+  openMod(`${d?'Edit':'Add'} Department`,`
+    <div id="dmerr"></div>
+    <div class="fg"><label>Department Name *</label><input type="text" id="dmnm" value="${d?.name||''}" placeholder="e.g. IT Support, HR, Billing"></div>
+    <div class="fg"><label>Description <span style="font-weight:400;color:var(--tx3);font-size:11px">(shown in ticket form)</span></label><input type="text" id="dmdesc" value="${d?.description||''}" placeholder="Brief description"></div>
+    <div class="dvd"></div>
+    <p style="font-size:13px;font-weight:500;margin-bottom:10px">Manager Assignment</p>
+    <div class="fg"><label>Department Manager</label>
+      <select id="dmmgr"><option value="">— None —</option>${elig.map(u=>`<option value="${u.id}"${u.id===d?.managerId?' selected':''}>${u.displayName||u.email} (${RL[u.role]||u.role})</option>`).join('')}</select>
+      <div class="ht">This user gets promoted to Manager and receives new ticket notifications.</div>
+    </div>
+    <div class="fg"><label>Manager Notification Email <span style="font-weight:400;color:var(--tx3);font-size:11px">(optional override)</span></label>
+      <input type="email" id="dmem" value="${d?.managerEmail||''}" placeholder="e.g. it-team@company.com">
+    </div>
+    <div class="dvd"></div>
+    <p style="font-size:13px;font-weight:500;margin-bottom:6px">Queue Manager <span style="font-size:11px;font-weight:400;color:var(--tx3)">(used when Assignment Mode = Queue Manager)</span></p>
+    <div class="fg"><label>Queue Manager</label>
+      <select id="dmqm"><option value="">— None —</option>${elig.map(u=>`<option value="${u.id}"${u.id===d?.queueManagerId?' selected':''}>${u.displayName||u.email} (${RL[u.role]||u.role})</option>`).join('')}</select>
+    </div>`,async()=>{
+    const nm=V('dmnm');if(!nm){G('dmerr').innerHTML='<div class="ms er">Name is required.</div>';return false;}
+    const mgrId=G('dmmgr').value,qmId=G('dmqm').value;
+    const data={name:nm,description:V('dmdesc'),managerId:mgrId,managerEmail:V('dmem'),queueManagerId:qmId};
+    if(d){
+      await db.collection('departments').doc(d.id).update(data);
+      if(mgrId)await db.collection('users').doc(mgrId).update({role:'manager',departmentId:d.id});
+    }else{
+      const ref=await db.collection('departments').add({...data,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      if(mgrId)await db.collection('users').doc(mgrId).update({role:'manager',departmentId:ref.id});
+    }
+    toast(`Department ${d?'updated':'created'}`,'ok');return true;
+  });
+}
+async function delDept(did){if(!confirm('Delete this department? Tickets will not be deleted.'))return;await db.collection('departments').doc(did).delete();toast('Department deleted','ok');}
+
+// ─── Modal helpers ───
+function openMod(title,html,onSave){
+  G('mtt').textContent=title;G('mbd').innerHTML=html;
+  G('mbg').classList.add('on');modFn=onSave;
+  G('msv').style.display='';
+}
+async function modSave(){if(!modFn)return;const ok=await modFn();if(ok!==false){closeMod();admSec(admTab);}}
+function closeMod(){G('mbg').classList.remove('on');modFn=null;}
+// modal save wired in DOMContentLoaded below
+
+// ═══════ PROFILE ═══════
+function pProfile(el){
+  const u=CP;const dept=depts.find(d=>d.id===u?.departmentId);
+  el.innerHTML=`
+    <div class="ph"><h2>My Account</h2></div>
+    <div style="max-width:640px;display:flex;flex-direction:column;gap:16px;">
+      <div class="card"><div class="chd"><h3>Profile</h3></div><div class="cbd">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+          <div class="av" style="width:52px;height:52px;font-size:18px">${ini(u?.displayName||u?.email)}</div>
+          <div><div style="font-size:16px;font-weight:600">${u?.displayName||'—'}</div>
+            <div style="font-size:13px;color:var(--tx3)">${u?.email}</div>
+            <span class="rb rb-${u?.role}" style="margin-top:5px;display:inline-flex">${RL[u?.role]||'User'}</span>
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg"><label>Display Name</label><input type="text" id="pfnm" value="${u?.displayName||''}"></div>
+          <div class="fg"><label>Department</label><div style="padding:8px 11px;background:var(--sur2);border-radius:var(--rs);font-size:13.5px">${dept?.name||'—'}</div></div>
+        </div>
+        <button class="btn pr" onclick="saveName()">Update Name</button>
+      </div></div>
+      <div class="card"><div class="chd"><h3>Change Password</h3></div><div class="cbd">
+        <div id="pwmsg"></div>
+        <div class="fg"><label>Current Password</label><input type="password" id="pwcur" placeholder="Your current password"></div>
+        <div class="fg"><label>New Password</label><input type="password" id="pwnew" placeholder="Min 8 characters" oninput="pwBar(this.value,'pwbar')">
+          <div id="pwbar" class="pbar"></div>
+        </div>
+        <div class="fg"><label>Confirm New Password</label><input type="password" id="pwcon" placeholder="Repeat new password"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn pr" onclick="changePw()">Change Password</button>
+          <button class="btn sc" onclick="doForgot()">Send reset email</button>
+        </div>
+      </div></div>
+    </div>`;
+}
+async function saveName(){const nm=V('pfnm');if(!nm)return toast('Name cannot be empty','er');await db.collection('users').doc(CU.uid).update({displayName:nm});CP.displayName=nm;G('tbnm').textContent=nm;G('tba').textContent=ini(nm);toast('Name updated','ok');}
+async function changePw(){
+  const cur=V('pwcur'),nw=V('pwnew'),con=V('pwcon');
+  const msg=G('pwmsg');
+  if(!cur||!nw||!con){msg.innerHTML='<div class="ms er">Fill in all password fields.</div>';return;}
+  if(nw.length<8){msg.innerHTML='<div class="ms er">New password must be at least 8 characters.</div>';return;}
+  if(nw!==con){msg.innerHTML='<div class="ms er">New passwords do not match.</div>';return;}
+  try{
+    const c=firebase.auth.EmailAuthProvider.credential(CU.email,cur);
+    await CU.reauthenticateWithCredential(c);await CU.updatePassword(nw);
+    msg.innerHTML='<div class="ms ok">Password changed successfully!</div>';
+    G('pwcur').value='';G('pwnew').value='';G('pwcon').value='';
+  }catch(e){msg.innerHTML=`<div class="ms er">${e.code==='auth/wrong-password'?'Current password is incorrect.':e.code==='auth/too-many-requests'?'Too many attempts.':e.message}</div>`;}
+}
+
+// ═══════ HELP ═══════
+function pHelp(el){
+  const S=(n,t,d)=>`<div class="hst"><div class="hnum">${n}</div><div class="hb"><strong>${t}</strong><p>${d}</p></div></div>`;
+  el.innerHTML=`
+    <div class="ph"><h2>Help &amp; User Guide</h2></div>
+    <div style="max-width:780px">
+      <div class="card" style="margin-bottom:20px;padding:16px 20px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:10px">Quick Navigation</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${[['#hr','Roles & Access'],['#ht','Submitting a Ticket'],['#hm','Managing Tickets'],['#hd','Departments'],['#hu','User Management'],['#hpw','Password Management'],['#hem','Email Notifications'],['#ha','Data Retention'],['#hs','Security']].map(([href,lbl])=>`<a href="${href}" onclick="document.querySelector('${href}').scrollIntoView({behavior:'smooth'});return false" style="padding:6px 10px;border-radius:var(--rs);font-size:13px;color:var(--tx2);display:block">${lbl}</a>`).join('')}</div>
+      </div>
+      <div id="hr" class="hs"><h3>Roles &amp; Access</h3>
+        <div class="rgrid">${[['admin','Admin',['All tickets & departments','Full user management','System settings & branding','Reports & analytics']],['manager','Manager',['Own department tickets','Re-assign & re-route','View reports','Internal notes']],['agent','Agent',['All tickets (read & respond)','Change status & priority','Internal notes']],['user','User',['Submit tickets','Track own tickets only','Reply to own tickets']]].map(([r,l,p])=>`<div class="rcard"><div class="rt"><span class="rb rb-${r}">${l}</span></div><ul>${p.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('')}</div>
+        <div class="hn">New registrations get <strong>User</strong> role. An Admin must promote them via Admin → Users → Edit.</div>
+      </div>
+      <div id="ht" class="hs"><h3>Submitting a Ticket</h3>
+        ${S(1,'Click "New Ticket"','Available to all roles. Fill in subject and clear description.')}
+        ${S(2,'Select a Department (required)','Determines who receives the ticket. A hint shows who it will be assigned to.')}
+        ${S(3,'Choose Priority','<span class="badge b-critical">critical</span> system down · <span class="badge b-high">high</span> significant impact · <span class="badge b-medium">medium</span> standard · <span class="badge b-low">low</span> minor')}
+        ${S(4,'Submit','Auto-assigned to dept manager. Email notification sent if configured.')}
+        <div class="hti">Regular users only see their own tickets. Managers see their dept. Admins see everything.</div>
+      </div>
+      <div id="hm" class="hs"><h3>Managing Tickets</h3>
+        ${S(1,'Click any ticket row','Opens detail panel on the right with all properties and activity timeline.')}
+        ${S(2,'Update Status','Use the Status dropdown. Every change is logged in the timeline automatically.')}
+        ${S(3,'Re-assign / Re-route','Change the Assigned To field. Managers use this to route to the right person.')}
+        ${S(4,'Reply vs Internal Note','Reply is visible to all. Internal Note (amber dot) is team-only.')}
+        ${S(5,'Quick Resolve','Click Resolve in the reply area to instantly mark as resolved.')}
+        <div style="background:var(--sur2);border:1px solid var(--bor);border-radius:var(--rs);padding:12px;margin-top:10px">${[['Open','New — no action yet'],['Pending','Waiting on requester'],['In Progress','Actively being worked'],['Resolved','Fixed, pending confirmation'],['Closed','Fully complete']].map(([s,d])=>`<div style="display:flex;align-items:center;gap:9px;padding:4px 0;border-bottom:1px solid var(--bor);font-size:12.5px"><span class="badge b-${s.toLowerCase().replace(' ','_')}">${s}</span><span style="color:var(--tx2)">${d}</span></div>`).join('')}</div>
+      </div>
+      <div id="hd" class="hs"><h3>Setting Up Departments</h3>
+        <div class="hn" style="margin-bottom:12px">Create departments <strong>before</strong> sharing the app — the dept dropdown is empty otherwise.</div>
+        ${S(1,'Admin → Departments → Add Department','Give it a name and optional description shown in the ticket form.')}
+        ${S(2,'Assign a Department Manager','User is promoted to Manager and receives new ticket notifications.')}
+        ${S(3,'Manager Notification Email (optional)','Override email — useful for shared inboxes like it-support@company.com.')}
+        ${S(4,'Queue Manager (optional)','When Assignment Mode = Queue Manager, tickets route here instead of dept manager.')}
+      </div>
+      <div id="hu" class="hs"><h3>User Management</h3>
+        ${S(1,'Users register at the login screen','New accounts default to User role.')}
+        ${S(2,'Admin → Users → Edit to promote','Roles: Admin, Manager, Agent, User.')}
+        ${S(3,'↺ PW sends a password reset email','User gets a link to set new password — admin never needs their current password.')}
+        ${S(4,'Deactivate to block access','History is preserved.')}
+      </div>
+      <div id="hpw" class="hs"><h3>Password Management</h3>
+        ${S('→','Self-service (My Account)','Click your name top-right → My Account → Change Password. Requires current password.')}
+        ${S('→','Forgot password (login screen)','Click "Forgot password?" and enter your email — reset link is sent.')}
+        ${S('→','Admin reset (Admin → Users)','Click ↺ PW to send reset email to any user — no current password needed.')}
+      </div>
+      <div id="hem" class="hs"><h3>Email Notifications</h3>
+        <p style="font-size:13px;color:var(--tx2);margin-bottom:12px">DeskFlow uses <strong>EmailJS</strong> — free, no server needed.</p>
+        ${S(1,'Sign up at emailjs.com','Create free account, add Email Service (Gmail, Outlook, or SMTP).')}
+        ${S(2,'Create Email Template','Variables: <code>{{to_email}}</code> <code>{{ticket_number}}</code> <code>{{subject}}</code> <code>{{priority}}</code> <code>{{department}}</code>')}
+        ${S(3,'Paste IDs in Admin → Email Notify','Service ID, Template ID, Public Key from EmailJS dashboard.')}
+        <div class="hti">Without EmailJS, notifications are logged to browser console — nothing fails silently.</div>
+      </div>
+      <div id="ha" class="hs"><h3>Data Retention</h3>
+        ${S('→','Archive','Resolved/Closed tickets older than threshold → Archived status. Still searchable via Archived filter.')}
+        ${S('→','Delete','Archived tickets older than delete threshold are permanently removed.')}
+        ${S('→','When it runs','Hourly when Admin or Manager is logged in. Configure in Admin → Data Retention.')}
+        <div class="hn">Default: archive 30 days, delete 60 days. Set delete threshold higher than archive threshold.</div>
+      </div>
+      <div id="hs" class="hs"><h3>Security</h3>
+        ${S('✓','Firebase Auth is secure','JWT tokens, bcrypt password hashing, HTTPS/TLS. Passwords never stored in Firestore.')}
+        ${S('✓','Set Firestore Security Rules','Without rules any authenticated user can read all data. Copy recommended rules from Admin → Security.')}
+        ${S('✓','API key scope','Restrict your Firebase API key to your hosting domain in Google Cloud Console → Credentials.')}
+      </div>
+    </div>`;
+}
+
+// helpers moved to top of script
+// Wire modal save on DOM ready
+document.addEventListener('DOMContentLoaded', () => { if(G('msv')) G('msv').onclick = modSave; });
+</script>
+</body>
+</html>
