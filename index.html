@@ -363,6 +363,8 @@ tbody tr:hover{background:var(--bg);}
     <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
       <div id="p-dashboard" class="pnl"></div>
       <div id="p-tickets" class="pnl"></div>
+      <div id="p-assigned" class="pnl"></div>
+      <div id="p-myrequests" class="pnl"></div>
       <div id="p-new-ticket" class="pnl"></div>
       <div id="p-reports" class="pnl"></div>
       <div id="p-admin" class="pnl"></div>
@@ -529,7 +531,7 @@ async function doForgot(){
   try{await auth.sendPasswordResetEmail(em);G('aerr').innerHTML='<div class="ms ok">Password reset email sent!</div>';}
   catch(e){E('aerr',fe(e.code));}
 }
-async function doLogout(){await auth.signOut();selId=null;tickets=[];users=[];depts=[];cfg={};}
+async function doLogout(){await auth.signOut();selId=null;tickets=[];users=[];depts=[];cfg={};notifs=[];prevTicketMap={};initialLoadDone=false;}
 function fe(code){return({'auth/wrong-password':'Incorrect password.','auth/user-not-found':'No account with that email.','auth/email-already-in-use':'Email already registered.','auth/too-many-requests':'Too many attempts — try later.','auth/weak-password':'Password too weak (min 8).','auth/invalid-email':'Invalid email.','auth/invalid-credential':'Incorrect email or password.'}[code]||'Error: '+code);}
 function pwBar(pw,id){
   let s=0;if(pw.length>=8)s++;if(pw.length>=12)s++;if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^a-zA-Z0-9]/.test(pw))s++;
@@ -544,16 +546,24 @@ function buildNav(){
   const items=[
     {id:'dashboard',lbl:'Dashboard',p:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',r:['admin','manager','agent','user']},
     {id:'tickets',lbl:'Tickets',p:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',r:['admin','manager','agent','user']},
+    {id:'assigned',lbl:'Assigned to Me',p:'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',r:['admin','manager','agent','user']},
+    {id:'myrequests',lbl:'My Requests',p:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7l3 3m0 0l3-3m-3 3V8',r:['admin','manager','agent','user']},
     {id:'new-ticket',lbl:'New Ticket',p:'M12 4v16m8-8H4',r:['admin','manager','agent','user']},
     {id:'reports',lbl:'Reports',p:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',r:['admin','manager']},
     {id:'admin',lbl:'Admin',p:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z',r:['admin']},
     {id:'profile',lbl:'My Account',p:'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',r:['admin','manager','agent','user']},
     {id:'help',lbl:'Help',p:'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',r:['admin','manager','agent','user']},
   ];
-  G('tnav').innerHTML=items.filter(n=>n.r.includes(role)).map(n=>
-    `<button class="tnav" id="nav-${n.id}" onclick="nav('${n.id}')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${n.p}"/></svg>${n.lbl}
-    </button>`).join('');
+  G('tnav').innerHTML=items.filter(n=>n.r.includes(role)).map(n=>{
+    let badge='';
+    if(n.id==='assigned'){
+      const cnt=tickets.filter(t=>t.assignedTo===CU?.uid&&!['resolved','closed','archived'].includes(t.status)).length;
+      if(cnt>0)badge=`<span style="background:var(--re);color:white;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:4px">${cnt}</span>`;
+    }
+    return `<button class="tnav" id="nav-${n.id}" onclick="nav('${n.id}')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${n.p}"/></svg>${n.lbl}${badge}
+    </button>`;
+  }).join('');
   upUserPill();
 }
 function upUserPill(){
@@ -576,400 +586,217 @@ function nav(id){
 // ═══════ DATA ═══════
 
 // ═══════ NOTIFICATIONS ═══════
-let notifs = [];       // {id, type, msg, ticketId, ticketNum, ts, read}
-let prevTicketMap = {}; // track previous state for change detection
-let notifOpen = false;
+let notifs=[];
+let notifOpen=false;
+let initialLoadDone=false; // true after first full data load
 
 function toggleNotifPanel(){
-  notifOpen = !notifOpen;
-  const panel = G('notif-panel');
-  if(panel) panel.classList.toggle('on', notifOpen);
-  if(notifOpen) renderNotifList();
+  notifOpen=!notifOpen;
+  const p=G('notif-panel');
+  if(p)p.classList.toggle('on',notifOpen);
+  if(notifOpen)renderNotifList();
 }
-
-// Close panel when clicking outside
-document.addEventListener('click', e => {
-  if(notifOpen && !e.target.closest('#bell-btn') && !e.target.closest('#notif-panel')){
-    notifOpen = false;
+document.addEventListener('click',e=>{
+  if(notifOpen&&!e.target.closest('#bell-btn')&&!e.target.closest('#notif-panel')){
+    notifOpen=false;
     G('notif-panel')?.classList.remove('on');
   }
 });
 
-function addNotif(type, msg, ticketId, ticketNum){
-  const id = Date.now() + Math.random();
-  notifs.unshift({id, type, msg, ticketId, ticketNum, ts: Date.now(), read: false});
-  if(notifs.length > 50) notifs = notifs.slice(0, 50);
-  // Save to localStorage per user
-  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
+function addNotif(type,msg,ticketId,ticketNum){
+  const n={id:Date.now()+Math.random(),type,msg,ticketId,ticketNum,ts:Date.now(),read:false};
+  notifs.unshift(n);
+  if(notifs.length>50)notifs=notifs.slice(0,50);
+  try{localStorage.setItem('df_notifs_'+(CU?.uid||'x'),JSON.stringify(notifs));}catch(e){}
   updateBell();
-  if(notifOpen) renderNotifList();
+  if(notifOpen)renderNotifList();
+  // Show a toast too so it's unmissable
+  toast(msg.replace(/<[^>]+>/g,''),'ok');
 }
 
 function loadNotifs(){
-  if(!CU) return;
-  try {
-    const saved = localStorage.getItem('df_notifs_' + CU.uid);
-    if(saved) notifs = JSON.parse(saved);
-  } catch(e){ notifs = []; }
+  if(!CU)return;
+  try{
+    const s=localStorage.getItem('df_notifs_'+CU.uid);
+    if(s)notifs=JSON.parse(s);
+  }catch(e){notifs=[];}
   updateBell();
 }
 
 function updateBell(){
-  const unread = notifs.filter(n => !n.read).length;
-  const dot = G('bell-dot');
-  if(dot) dot.classList.toggle('on', unread > 0);
-  const btn = G('bell-btn');
-  if(btn) btn.title = unread > 0 ? `${unread} unread notification${unread>1?'s':''}` : 'Notifications';
+  const unread=notifs.filter(n=>!n.read).length;
+  const dot=G('bell-dot');
+  if(dot)dot.classList.toggle('on',unread>0);
 }
 
 function renderNotifList(){
-  const list = G('notif-list');
-  if(!list) return;
-  if(!notifs.length){
-    list.innerHTML = '<div class="notif-empty">No notifications yet</div>';
-    return;
-  }
-  list.innerHTML = notifs.map(n => {
-    const typeMap = {
-      assigned: {cls:'ass', icon:'<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>'},
-      updated:  {cls:'upd', icon:'<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>'},
-      comment:  {cls:'new', icon:'<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>'},
-      new:      {cls:'new', icon:'<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>'},
-    };
-    const t = typeMap[n.type] || typeMap.updated;
-    return `<div class="notif-item${n.read?'':' unread'}" onclick="openNotif('${n.id}','${n.ticketId||''}')">
-      <div class="notif-ic ${t.cls}">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${n.type==='assigned'?'#6d28d9':n.type==='comment'?'#1D4ED8':'#16A34A'}" stroke-width="2"><path d="${t.icon.match(/d="([^"]+)"/)?.[1]||''}"/></svg>
-      </div>
-      <div class="notif-body">
-        <div class="notif-msg">${n.msg}</div>
-        <div class="notif-ts">${ago(n.ts)}</div>
-      </div>
-    </div>`;
-  }).join('');
+  const list=G('notif-list');if(!list)return;
+  if(!notifs.length){list.innerHTML='<div class="notif-empty">No notifications yet</div>';return;}
+  const icons={
+    assigned:['ass','#6d28d9','M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+    new:     ['new','#1D4ED8','M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+    comment: ['new','#1D4ED8','M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'],
+    updated: ['upd','#16A34A','M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'],
+  };
+  list.innerHTML='';
+  notifs.forEach(n=>{
+    const [cls,col,path]=icons[n.type]||icons.updated;
+    const div=document.createElement('div');
+    div.className='notif-item'+(n.read?'':' unread');
+    div.onclick=()=>openNotif(n.id,n.ticketId||'');
+    div.innerHTML=
+      '<div class="notif-ic '+cls+'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="'+col+'" stroke-width="2"><path d="'+path+'"/></svg></div>'+
+      '<div class="notif-body"><div class="notif-msg">'+n.msg+'</div><div class="notif-ts">'+ago(n.ts)+'</div></div>';
+    list.appendChild(div);
+  });
 }
 
-function openNotif(nid, ticketId){
-  // Mark as read
-  const n = notifs.find(x => String(x.id) === String(nid));
-  if(n) n.read = true;
-  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
+function openNotif(nid,ticketId){
+  const n=notifs.find(x=>String(x.id)===String(nid));
+  if(n)n.read=true;
+  try{localStorage.setItem('df_notifs_'+(CU?.uid||'x'),JSON.stringify(notifs));}catch(e){}
   updateBell();
-  if(notifOpen) renderNotifList();
-  // Navigate to ticket
+  if(notifOpen)renderNotifList();
   if(ticketId){
-    notifOpen = false;
+    notifOpen=false;
     G('notif-panel')?.classList.remove('on');
-    nav('tickets');
-    setTimeout(() => openDp(ticketId), 200);
+    nav('assigned');
+    setTimeout(()=>openDp(ticketId,'dpanel-as'),300);
   }
 }
 
 function markAllRead(){
-  notifs.forEach(n => n.read = true);
-  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
-  updateBell();
-  renderNotifList();
+  notifs.forEach(n=>n.read=true);
+  try{localStorage.setItem('df_notifs_'+(CU?.uid||'x'),JSON.stringify(notifs));}catch(e){}
+  updateBell();renderNotifList();
 }
 
-function checkTicketChanges(newTickets){
-  if(!CU) return;
-  const uid=CU.uid;
+// Called every time ticket snapshot fires
+// prevTicketMap tracks last known state per ticket
+let prevTicketMap={};
 
+function checkTicketChanges(newTickets){
+  if(!CU||!initialLoadDone){
+    // First call: just build the map, don't fire notifications
+    newTickets.forEach(t=>{
+      prevTicketMap[t.id]={
+        status:t.status,
+        assignedTo:t.assignedTo||'',
+        commentCount:(t.comments||[]).length
+      };
+    });
+    initialLoadDone=true;
+    return;
+  }
+
+  const uid=CU.uid;
   newTickets.forEach(t=>{
     const prev=prevTicketMap[t.id];
     const num=t.ticketNumber||('#'+t.id.slice(-6));
 
     if(!prev){
-      // Brand new ticket we haven't seen before
-      // Only notify if it arrived AFTER we loaded (not on first load)
-      // We know it's post-load if prevTicketMap already has OTHER entries
-      if(Object.keys(prevTicketMap).length>0){
-        // New ticket assigned to me
-        if(t.assignedTo===uid){
-          addNotif('assigned',
-            '<strong>'+num+'</strong> assigned to you: '+t.subject,
-            t.id, num);
-        }
-        // New ticket in my dept (for managers)
-        else if(CP?.role==='manager' && t.departmentId===CP?.departmentId && t.assignedTo!==uid){
-          addNotif('new',
-            'New ticket <strong>'+num+'</strong> in your department: '+t.subject,
-            t.id, num);
-        }
+      // Ticket we've never seen — appeared mid-session (genuinely new)
+      if(t.assignedTo===uid){
+        addNotif('assigned','<strong>'+num+'</strong> assigned to you: '+t.subject,t.id,num);
+      } else if(CP?.role==='manager'&&t.departmentId===CP?.departmentId){
+        addNotif('new','New ticket <strong>'+num+'</strong> in your dept: '+t.subject,t.id,num);
       }
-      // Always record in map
-      prevTicketMap[t.id]={
-        status:t.status,
-        assignedTo:t.assignedTo,
-        commentCount:(t.comments||[]).length,
-        ts: t.createdAt?.toDate?.()?.getTime()||0
-      };
+      prevTicketMap[t.id]={status:t.status,assignedTo:t.assignedTo||'',commentCount:(t.comments||[]).length};
       return;
     }
 
-    // Ticket we've seen before — check for changes
+    // Changed ticket — check what changed
+    const prevAssigned=prev.assignedTo||'';
+    const currAssigned=t.assignedTo||'';
+
     // 1. Newly assigned to me
-    if(prev.assignedTo!==t.assignedTo && t.assignedTo===uid){
+    if(prevAssigned!==currAssigned&&currAssigned===uid){
       addNotif('assigned','<strong>'+num+'</strong> was assigned to you',t.id,num);
     }
-
-    // 2. Status changed on a ticket I own or am assigned to
-    if(prev.status!==t.status && (t.assignedTo===uid||t.createdBy===uid)){
-      const who=t.assignedTo===uid?'your assigned ticket':'your ticket';
-      addNotif('updated',
-        'Status changed to <strong>'+(SL[t.status]||t.status)+'</strong> on '+who+' <strong>'+num+'</strong>',
-        t.id, num);
+    // 2. Status changed on ticket I care about
+    if(prev.status!==t.status&&(currAssigned===uid||t.createdBy===uid)){
+      const label=SL[t.status]||t.status;
+      addNotif('updated','Status → <strong>'+label+'</strong> on <strong>'+num+'</strong>',t.id,num);
     }
-
-    // 3. New comment on ticket I submitted or am assigned to
+    // 3. New comment on ticket I care about (not my own comment)
     const newCount=(t.comments||[]).length;
-    if(newCount>prev.commentCount && (t.assignedTo===uid||t.createdBy===uid)){
+    if(newCount>prev.commentCount&&(currAssigned===uid||t.createdBy===uid)){
       const last=(t.comments||[]).slice(-1)[0];
-      if(last && last.authorId!==uid){
-        addNotif('comment',
-          'New reply on <strong>'+num+'</strong> from '+(last.authorName||'someone'),
-          t.id, num);
+      if(last&&last.authorId!==uid){
+        addNotif('comment','New reply on <strong>'+num+'</strong> from '+(last.authorName||'team'),t.id,num);
       }
     }
 
-    // Update map
-    prevTicketMap[t.id]={
-      status:t.status,
-      assignedTo:t.assignedTo,
-      commentCount:newCount,
-      ts: t.createdAt?.toDate?.()?.getTime()||0
-    };
-  });
-
-  // Clean up map for tickets no longer in our list
-  const currentIds=new Set(newTickets.map(t=>t.id));
-  Object.keys(prevTicketMap).forEach(k=>{if(!currentIds.has(k))delete prevTicketMap[k];});
-}
-
-function addNotif(type, msg, ticketId, ticketNum){
-  const id = Date.now() + Math.random();
-  notifs.unshift({id, type, msg, ticketId, ticketNum, ts: Date.now(), read: false});
-  if(notifs.length > 50) notifs = notifs.slice(0, 50);
-  // Save to localStorage per user
-  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
-  updateBell();
-  if(notifOpen) renderNotifList();
-}
-
-function loadNotifs(){
-  if(!CU) return;
-  try {
-    const saved = localStorage.getItem('df_notifs_' + CU.uid);
-    if(saved) notifs = JSON.parse(saved);
-  } catch(e){ notifs = []; }
-  updateBell();
-}
-
-function updateBell(){
-  const unread = notifs.filter(n => !n.read).length;
-  const dot = G('bell-dot');
-  if(dot) dot.classList.toggle('on', unread > 0);
-  const btn = G('bell-btn');
-  if(btn) btn.title = unread > 0 ? `${unread} unread notification${unread>1?'s':''}` : 'Notifications';
-}
-
-function renderNotifList(){
-  const list = G('notif-list');
-  if(!list) return;
-  if(!notifs.length){
-    list.innerHTML = '<div class="notif-empty">No notifications yet</div>';
-    return;
-  }
-  list.innerHTML = notifs.map(n => {
-    const typeMap = {
-      assigned: {cls:'ass', icon:'<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>'},
-      updated:  {cls:'upd', icon:'<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>'},
-      comment:  {cls:'new', icon:'<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>'},
-      new:      {cls:'new', icon:'<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>'},
-    };
-    const t = typeMap[n.type] || typeMap.updated;
-    return `<div class="notif-item${n.read?'':' unread'}" onclick="openNotif('${n.id}','${n.ticketId||''}')">
-      <div class="notif-ic ${t.cls}">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${n.type==='assigned'?'#6d28d9':n.type==='comment'?'#1D4ED8':'#16A34A'}" stroke-width="2"><path d="${t.icon.match(/d="([^"]+)"/)?.[1]||''}"/></svg>
-      </div>
-      <div class="notif-body">
-        <div class="notif-msg">${n.msg}</div>
-        <div class="notif-ts">${ago(n.ts)}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function openNotif(nid, ticketId){
-  // Mark as read
-  const n = notifs.find(x => String(x.id) === String(nid));
-  if(n) n.read = true;
-  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
-  updateBell();
-  if(notifOpen) renderNotifList();
-  // Navigate to ticket
-  if(ticketId){
-    notifOpen = false;
-    G('notif-panel')?.classList.remove('on');
-    nav('tickets');
-    setTimeout(() => openDp(ticketId), 200);
-  }
-}
-
-function markAllRead(){
-  notifs.forEach(n => n.read = true);
-  localStorage.setItem('df_notifs_' + CU?.uid, JSON.stringify(notifs.slice(0,50)));
-  updateBell();
-  renderNotifList();
-}
-
-function checkTicketChanges(newTickets){
-  if(!CU) return;
-  const uid = CU.uid;
-  newTickets.forEach(t => {
-    const prev = prevTicketMap[t.id];
-    // Skip first load - just build the map
-    if(!prev){
-      prevTicketMap[t.id] = {status:t.status, assignedTo:t.assignedTo, commentCount:(t.comments||[]).length};
-      return;
-    }
-    const num = t.ticketNumber || ('#'+t.id.slice(-6));
-    // 1. Newly assigned to me
-    if(prev.assignedTo !== t.assignedTo && t.assignedTo === uid){
-      addNotif('assigned', `<strong>${num}</strong> was assigned to you`, t.id, num);
-    }
-    // 2. Status changed on my ticket or assigned to me
-    if(prev.status !== t.status && (t.assignedTo === uid || t.createdBy === uid)){
-      const who = t.assignedTo === uid ? 'your assigned ticket' : 'your ticket';
-      addNotif('updated', `Status changed to <strong>${SL[t.status]||t.status}</strong> on ${who} <strong>${num}</strong>`, t.id, num);
-    }
-    // 3. New comment on ticket assigned to me or created by me
-    const newCmtCount = (t.comments||[]).length;
-    if(newCmtCount > prev.commentCount && (t.assignedTo === uid || t.createdBy === uid)){
-      const latestCmt = (t.comments||[]).slice(-1)[0];
-      // Don't notify for my own comments
-      if(latestCmt && latestCmt.authorId !== uid){
-        addNotif('comment', `New reply on <strong>${num}</strong> from ${latestCmt.authorName||'someone'}`, t.id, num);
-      }
-    }
-    // Update map
-    prevTicketMap[t.id] = {status:t.status, assignedTo:t.assignedTo, commentCount:newCmtCount};
-  });
-  // Handle new tickets assigned to me
-  newTickets.forEach(t => {
-    if(!prevTicketMap[t.id] && t.assignedTo === uid && t.autoAssigned){
-      const num = t.ticketNumber || ('#'+t.id.slice(-6));
-      addNotif('new', `New ticket <strong>${num}</strong> assigned to you: ${t.subject}`, t.id, num);
-    }
+    prevTicketMap[t.id]={status:t.status,assignedTo:currAssigned,commentCount:newCount};
   });
 }
+
 
 function loadData(){
   const role=CP?.role;
+  const uid=CU.uid;
+  initialLoadDone=false; prevTicketMap={}; // reset for fresh login
   const canM=['admin','manager','agent'].includes(role);
+  const byDate=(a,b)=>(b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0);
 
-  // All roles need departments for New Ticket form
   db.collection('departments').onSnapshot(s=>{
     depts=s.docs.map(d=>({id:d.id,...d.data()}));
     if(curPanel==='admin')rPanel('admin');
     if(curPanel==='new-ticket')rPanel('new-ticket');
   });
 
-  // Managers+ need user list
-  if(canM){
-    db.collection('users').onSnapshot(s=>{
-      users=s.docs.map(d=>({id:d.id,...d.data()}));
-      if(curPanel==='admin')rPanel('admin');
-    });
-  }
+  db.collection('users').onSnapshot(s=>{
+    users=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(curPanel==='admin')rPanel('admin');
+  });
 
-  // ── TICKET QUERIES by role ──
   if(role==='admin'||role==='agent'){
-    // Admin and agent: ALL tickets
+    // Full collection — no where() so orderBy is safe
     db.collection('tickets').orderBy('createdAt','desc').onSnapshot(s=>{
       const t=s.docs.map(d=>({id:d.id,...d.data()}));
       checkTicketChanges(t); tickets=t;
-      if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
+      if(['tickets','dashboard','reports','assigned','myrequests'].includes(curPanel))rPanel(curPanel);
     });
-
-  } else if(role==='manager'){
-    // Manager sees:
-    // 1. All tickets in their department (if departmentId set)
-    // 2. All tickets directly assigned to them (any department)
-    // 3. All tickets they created
-    // Uses client-side merge of multiple snapshot listeners
-    const uid=CU.uid;
-    const deptId=CP.departmentId||'';
-    let byDept={}, byAssigned={}, byCreated={};
-
-    const merge=()=>{
-      const all={...byDept,...byAssigned,...byCreated};
-      const merged=Object.values(all).sort((a,b)=>
-        (b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0));
-      checkTicketChanges(merged); tickets=merged;
-      if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
-    };
-
-    // Query 1: dept tickets
-    if(deptId){
-      db.collection('tickets').where('departmentId','==',deptId).orderBy('createdAt','desc')
-        .onSnapshot(s=>{
-          s.docs.forEach(d=>{byDept[d.id]={id:d.id,...d.data()};});
-          // Remove tickets no longer in this dept
-          const ids=new Set(s.docs.map(d=>d.id));
-          Object.keys(byDept).forEach(k=>{if(!ids.has(k))delete byDept[k];});
-          merge();
-        });
-    }
-
-    // Query 2: assigned to this manager
-    db.collection('tickets').where('assignedTo','==',uid).orderBy('createdAt','desc')
-      .onSnapshot(s=>{
-        byAssigned={};
-        s.docs.forEach(d=>{byAssigned[d.id]={id:d.id,...d.data()};});
-        merge();
-      });
-
-    // Query 3: created by this manager
-    db.collection('tickets').where('createdBy','==',uid).orderBy('createdAt','desc')
-      .onSnapshot(s=>{
-        byCreated={};
-        s.docs.forEach(d=>{byCreated[d.id]={id:d.id,...d.data()};});
-        merge();
-      });
-
-  } else {
-    // Role === 'user': tickets they CREATED or are ASSIGNED to
-    const uid=CU.uid;
-    let byCreated={}, byAssigned={};
-
-    const merge=()=>{
-      const all={...byCreated,...byAssigned};
-      const merged=Object.values(all).sort((a,b)=>
-        (b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0));
-      checkTicketChanges(merged); tickets=merged;
-      if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
-    };
-
-    // Tickets created by this user
-    db.collection('tickets').where('createdBy','==',uid).orderBy('createdAt','desc')
-      .onSnapshot(s=>{
-        byCreated={};
-        s.docs.forEach(d=>{byCreated[d.id]={id:d.id,...d.data()};});
-        merge();
-      });
-
-    // Tickets assigned to this user (e.g. admin re-assigned to them)
-    db.collection('tickets').where('assignedTo','==',uid).orderBy('createdAt','desc')
-      .onSnapshot(s=>{
-        byAssigned={};
-        s.docs.forEach(d=>{byAssigned[d.id]={id:d.id,...d.data()};});
-        merge();
-      });
+    return;
   }
 
-  if(['admin','manager'].includes(role)) doArchive();
+  // For manager AND user: merge three independent queries
+  // NEVER use .where().orderBy() together — requires Firestore composite index
+  // Sort client-side instead
+  let pool={};
+  let q1done=false, q2done=false, q3done=false;
+
+  const merge=()=>{
+    if(!q1done||!q2done||!q3done) return;
+    const merged=Object.values(pool).sort(byDate);
+    checkTicketChanges(merged);
+    tickets=merged;
+    if(['tickets','dashboard','reports','assigned','myrequests'].includes(curPanel))rPanel(curPanel);
+  };
+
+  // Q1: tickets assigned to me (ANY role can be assigned)
+  db.collection('tickets').where('assignedTo','==',uid).onSnapshot(s=>{
+    s.docs.forEach(d=>{pool[d.id]={id:d.id,...d.data()};});
+    q1done=true; merge();
+  });
+
+  // Q2: tickets I created
+  db.collection('tickets').where('createdBy','==',uid).onSnapshot(s=>{
+    s.docs.forEach(d=>{pool[d.id]={id:d.id,...d.data()};});
+    q2done=true; merge();
+  });
+
+  // Q3: manager gets their department tickets too
+  if(role==='manager' && CP.departmentId){
+    db.collection('tickets').where('departmentId','==',CP.departmentId).onSnapshot(s=>{
+      s.docs.forEach(d=>{pool[d.id]={id:d.id,...d.data()};});
+      q3done=true; merge();
+    });
+  } else {
+    q3done=true; // not needed for user role
+  }
+
+  if(role==='manager') doArchive();
 }
 
 async function doArchive(){
@@ -994,7 +821,7 @@ async function doArchive(){
 function rPanel(id){
   const el=G('p-'+id);
   if(!el||!el.classList.contains('on'))return;
-  ({dashboard:pDash,tickets:pTickets,'new-ticket':pNewTk,reports:pReports,admin:pAdmin,profile:pProfile,help:pHelp}[id]||noop)(el);
+  ({dashboard:pDash,tickets:pTickets,assigned:pAssigned,myrequests:pMyReqs,'new-ticket':pNewTk,reports:pReports,admin:pAdmin,profile:pProfile,help:pHelp}[id]||noop)(el);
 }
 // noop defined above
 
@@ -1025,7 +852,7 @@ function pDash(el){
     </div>
     ${mine.length?`<div class="card"><div class="chd"><h3>Assigned to Me</h3><span class="badge b-open">${mine.length}</span></div>
     <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Subject</th><th>Department</th><th>Status</th><th>Priority</th><th>Updated</th></tr></thead>
-    <tbody>${mine.slice(0,6).map(t=>{const d=depts.find(x=>x.id===t.departmentId);return`<tr style="cursor:pointer" onclick="nav('tickets');setTimeout(()=>openDp('${t.id}'),80)">
+    <tbody>${mine.slice(0,6).map(t=>{const d=depts.find(x=>x.id===t.departmentId);return`<tr style="cursor:pointer" onclick="nav('assigned');setTimeout(()=>openDp('${t.id}','dpanel-as'),80)">
       <td style="font-family:var(--mo);font-size:11px;color:var(--tx3)">${t.ticketNumber||t.id.slice(-6)}</td>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">${t.subject}</td>
       <td>${d?`<span class="badge b-dept">${d.name}</span>`:'—'}</td>
@@ -1137,11 +964,13 @@ function setVw(v){
   tvw=v;relistTk();
   document.querySelectorAll('.fp').forEach(b=>b.classList.toggle('on',b.textContent.trim()===(v==='all'?'All':v==='archived'?'Archived':(SL[v]||v))));
 }
-async function openDp(id){
-  selId=id;relistTk();
-  const dp=G('dpanel');if(!dp)return;
+async function openDp(id, dpId='dpanel'){
+  selId=id;
+  if(curPanel==='tickets') relistTk();
+  else rPanel(curPanel);
+  const dp=G(dpId);if(!dp)return;
   dp.classList.remove('hid');dp.innerHTML='<div class="ld"><div class="sp"></div></div>';
-  await renderDp(id);
+  await renderDp(id, dpId);
 }
 async function renderDp(id){
   const t=tickets.find(x=>x.id===id);const dp=G('dpanel');
@@ -1161,7 +990,7 @@ async function renderDp(id){
         <div class="dpid">${t.ticketNumber||t.id.slice(-8)} · ${dept?.name||'No Department'}</div>
         <div class="dptt">${t.subject}</div>
       </div>
-      <button class="btn ic" style="flex-shrink:0" onclick="selId=null;G('dpanel').classList.add('hid');relistTk()">
+      <button class="btn ic" style="flex-shrink:0" onclick="selId=null;document.querySelectorAll('.dp').forEach(d=>d.classList.add('hid'));if(curPanel==='tickets')relistTk();else rPanel(curPanel);">
         <svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M4.3 4.3a1 1 0 011.4 0L8 6.6l2.3-2.3a1 1 0 111.4 1.4L9.4 8l2.3 2.3a1 1 0 01-1.4 1.4L8 9.4l-2.3 2.3a1 1 0 01-1.4-1.4L6.6 8 4.3 5.7a1 1 0 010-1.4z"/></svg>
       </button>
     </div></div>
@@ -1171,7 +1000,7 @@ async function renderDp(id){
         <div class="mi"><label>Status</label>${canM?`<select onchange="updTk('${id}','status',this.value)">${ST.map(s=>`<option value="${s}"${s===t.status?' selected':''}>${SL[s]}</option>`).join('')}</select>`:`<span class="badge b-${t.status}">${SL[t.status]}</span>`}</div>
         <div class="mi"><label>Priority</label>${canM?`<select onchange="updTk('${id}','priority',this.value)">${PR.map(p=>`<option value="${p}"${p===t.priority?' selected':''}>${p}</option>`).join('')}</select>`:`<span class="badge b-${t.priority}">${t.priority}</span>`}</div>
         <div class="mi"><label>Department</label>${(canM&&role==='admin')?`<select onchange="updTk('${id}','departmentId',this.value)"><option value="">—</option>${depts.map(d=>`<option value="${d.id}"${d.id===t.departmentId?' selected':''}>${d.name}</option>`).join('')}</select>`:`<div class="vl">${dept?.name||'—'}</div>`}</div>
-        <div class="mi"><label>Assigned To</label>${canM?`<select onchange="updTk('${id}','assignedTo',this.value)"><option value="">Unassigned</option>${users.filter(u=>['admin','manager','agent'].includes(u.role)&&u.active).map(u=>`<option value="${u.id}"${u.id===t.assignedTo?' selected':''}>${u.displayName||u.email}</option>`).join('')}</select>`:`<div class="vl">${ass?.displayName||'—'}</div>`}</div>
+        <div class="mi"><label>Assigned To</label>${canM?`<select onchange="updTk('${id}','assignedTo',this.value)"><option value="">Unassigned</option>${users.filter(u=>u.active!==false).map(u=>`<option value="${u.id}"${u.id===t.assignedTo?' selected':''}>${u.displayName||u.email} (${RL[u.role]||u.role})</option>`).join('')}</select>`:`<div class="vl">${ass?.displayName||'—'}</div>`}</div>
         <div class="mi"><label>Requester</label><div class="vl">${t.requesterName||'—'}</div></div>
         <div class="mi"><label>Opened</label><div class="vl" style="font-size:12px;color:var(--tx3)">${fmtDate(t.createdAt)}</div></div>
       </div>
@@ -1228,6 +1057,100 @@ async function addCmt(id,type){
 }
 
 // ═══════ NEW TICKET ═══════
+
+// ═══════ ASSIGNED TO ME ═══════
+function pAssigned(el){
+  const uid=CU.uid;
+  const mine=tickets.filter(t=>t.assignedTo===uid&&t.status!=='archived');
+  const done=tickets.filter(t=>t.assignedTo===uid&&['resolved','closed','archived'].includes(t.status));
+
+  el.innerHTML=`
+    <div class="ph"><h2>Assigned to Me</h2>
+      <span style="font-size:13px;color:var(--tx3)">${mine.length} active</span>
+    </div>
+    ${mine.length===0&&done.length===0?`<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <div class="empty-t">No tickets assigned to you</div>
+      <p>Tickets assigned to you will appear here</p>
+    </div>`:`
+    <div style="display:flex;flex-direction:column;gap:18px">
+      ${mine.length?`<div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px">Active (${mine.length})</div>
+        <div class="tkl">${mine.map(t=>tkCard(t,true)).join('')}</div>
+      </div>`:''}
+      ${done.length?`<div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px">Resolved / Closed (${done.length})</div>
+        <div class="tkl">${done.map(t=>tkCard(t,true)).join('')}</div>
+      </div>`:''}
+    </div>`}
+    <div class="tll-r" style="position:fixed;top:60px;right:0;width:410px;height:calc(100vh - 60px)">
+      <div id="dpanel-as" class="dp hid"></div>
+    </div>`;
+}
+
+// ═══════ MY REQUESTS ═══════
+function pMyReqs(el){
+  const uid=CU.uid;
+  const mine=tickets.filter(t=>t.createdBy===uid&&t.status!=='archived');
+  const done=tickets.filter(t=>t.createdBy===uid&&['resolved','closed','archived'].includes(t.status));
+
+  el.innerHTML=`
+    <div class="ph"><h2>My Requests</h2>
+      <span style="font-size:13px;color:var(--tx3)">${mine.length} active</span>
+      <button class="btn pr" onclick="nav('new-ticket')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 010 2H9v4a1 1 0 01-2 0V9H3a1 1 0 010-2h4V3a1 1 0 011-1z"/></svg>New Request
+      </button>
+    </div>
+    ${mine.length===0&&done.length===0?`<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      <div class="empty-t">No requests yet</div>
+      <p>Tickets you submit will appear here</p>
+    </div>`:`
+    <div style="display:flex;flex-direction:column;gap:18px">
+      ${mine.length?`<div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px">Active (${mine.length})</div>
+        <div class="tkl">${mine.map(t=>tkCard(t,false)).join('')}</div>
+      </div>`:''}
+      ${done.length?`<div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px">Completed (${done.length})</div>
+        <div class="tkl">${done.map(t=>tkCard(t,false)).join('')}</div>
+      </div>`:''}
+    </div>`}
+    <div class="tll-r" style="position:fixed;top:60px;right:0;width:410px;height:calc(100vh - 60px)">
+      <div id="dpanel-mr" class="dp hid"></div>
+    </div>`;
+}
+
+// Shared ticket card for assigned/myrequests panels
+function tkCard(t, showAssignee){
+  const dept=depts.find(d=>d.id===t.departmentId);
+  const ass=users.find(u=>u.id===t.assignedTo);
+  const req=users.find(u=>u.id===t.createdBy);
+  const dpId = curPanel==='assigned'?'dpanel-as':'dpanel-mr';
+  return `<div class="tkr${selId===t.id?' sl':''}" onclick="selId='${t.id}';openDpIn('${t.id}','${dpId}')">
+    <span class="pd pd-${t.priority}"></span>
+    <div style="min-width:0">
+      <div class="tks">${t.subject}</div>
+      <div class="tkm">
+        <span style="font-family:var(--mo);font-size:10.5px">${t.ticketNumber||('#'+t.id.slice(-6))}</span>
+        ${dept?`<span class="badge b-dept" style="padding:1px 5px;font-size:10px">${dept.name}</span>`:''}
+        ${showAssignee&&req?`<span style="color:var(--tx3)">from ${req.displayName||req.email}</span>`:''}
+        ${!showAssignee&&ass?`<span style="color:var(--tx3)">→ ${ass.displayName||ass.email}</span>`:''}
+      </div>
+    </div>
+    <div class="tkr2">
+      <span class="badge b-${t.status}">${SL[t.status]||t.status}</span>
+      <span class="badge b-${t.priority}">${t.priority}</span>
+      <span class="tkt">${ago(t.updatedAt||t.createdAt)}</span>
+    </div>
+  </div>`;
+}
+
+// Open detail panel in a specific container
+async function openDpIn(id, containerId){
+  await openDp(id, containerId);
+}
+
 function pNewTk(el){
   const canM=['admin','manager','agent'].includes(CP?.role);
   const upOn=cfg.uploadEnabled===true;const maxMB=cfg.uploadMaxMB||3;
@@ -1260,7 +1183,7 @@ function pNewTk(el){
       <div id="dpthint" style="display:none" class="ms in"></div>
       ${canM?`<div class="fg"><label>Override Assignee <span style="font-weight:400;color:var(--tx3);font-size:11px">(optional — defaults to dept manager)</span></label>
         <select id="ntassign"><option value="">Auto-assign to dept manager</option>
-        ${users.filter(u=>['admin','manager','agent'].includes(u.role)&&u.active).map(u=>`<option value="${u.id}">${u.displayName||u.email} (${RL[u.role]||u.role})</option>`).join('')}</select>
+        ${users.filter(u=>u.active!==false).map(u=>`<option value="${u.id}">${u.displayName||u.email} (${RL[u.role]||u.role})</option>`).join('')}</select>
       </div>`:''}
       ${upOn?`<div class="fg">
         <label>Attachment <span style="font-weight:400;color:var(--tx3);font-size:11px">(1 image, max ${maxMB}MB)</span></label>
