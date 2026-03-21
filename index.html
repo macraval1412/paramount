@@ -333,6 +333,7 @@ tbody tr:hover{background:var(--bg)}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
         <span class="bdot" id="bdot"></span>
       </button>
+      <button class="btn xs sc" title="Test notification" onclick="addNotif('updated','Test notification — bell is working!','','')" style="font-size:10px;padding:3px 6px">Test 🔔</button>
       <button class="upill" onclick="nav('profile')">
         <div class="ava" id="tb-av"></div>
         <div><div class="uname" id="tb-uname">—</div><div class="urole" id="tb-urole">—</div></div>
@@ -716,9 +717,13 @@ function checkChanges(newTickets, allDone){
     newTickets.forEach(t=>{
       prevMap[t.id]={status:t.status,assignedTo:t.assignedTo||'',commentCount:(t.comments||[]).length};
     });
-    if(allDone) loadDone=true;
+    if(allDone){
+      loadDone=true;
+      console.log('[DeskFlow] Initial load complete. Tracking',Object.keys(prevMap).length,'tickets for notifications. uid='+uid);
+    }
     return;
   }
+  console.log('[DeskFlow] checkChanges (post-load):',newTickets.length,'tickets, uid='+uid);
   newTickets.forEach(t=>{
     const prev=prevMap[t.id];
     const num=t.ticketNumber||('#'+t.id.slice(-6));
@@ -735,8 +740,10 @@ function checkChanges(newTickets, allDone){
     const wasAssigned=prev.assignedTo||'', nowAssigned=t.assignedTo||'';
     if(wasAssigned!==nowAssigned&&nowAssigned===uid)
       addNotif('assigned','<strong>'+num+'</strong> was assigned to you',t.id,num);
-    if(prev.status!==t.status&&(iMine||iMade))
+    if(prev.status!==t.status&&(iMine||iMade)){
+      console.log('[DeskFlow] Status changed:',prev.status,'→',t.status,'on',num,'iMine='+iMine,'iMade='+iMade);
       addNotif('updated','Status → <strong>'+(SL[t.status]||t.status)+'</strong> on <strong>'+num+'</strong>',t.id,num);
+    }
     const nc=(t.comments||[]).length;
     if(nc>prev.commentCount&&(iMine||iMade)){
       const last=(t.comments||[]).slice(-1)[0];
@@ -1010,19 +1017,27 @@ function pAssigned(el){
   const uid=CU.uid;
   const active=tickets.filter(t=>t.assignedTo===uid&&!['resolved','closed','archived'].includes(t.status));
   const done=tickets.filter(t=>t.assignedTo===uid&&['resolved','closed','archived'].includes(t.status));
-  el.innerHTML=`
-    <div class="ph"><h2>Assigned to Me</h2><span style="font-size:13px;color:var(--t3)">${active.length} active</span></div>
-    <div class="tll">
-      <div class="tll-left">
-        ${active.length===0&&done.length===0
-          ?`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><div class="empty-t">Nothing assigned to you</div><p>Tickets assigned to you appear here</p></div>`
-          :`<div style="display:flex;flex-direction:column;gap:16px">
-            ${active.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Active (${active.length})</div><div class="tkl">${active.map(t=>tkCard(t,'dp-assigned',true)).join('')}</div></div>`:''}
-            ${done.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Completed (${done.length})</div><div class="tkl">${done.map(t=>tkCard(t,'dp-assigned',true)).join('')}</div></div>`:''}
-          </div>`}
-      </div>
-      <div class="tll-right"><div id="dp-assigned" class="dp hid"></div></div>
+  // Keep dp div alive - only re-render the list, not the whole panel
+  if(!el.querySelector('#dp-assigned')){
+    el.innerHTML=`
+      <div class="ph"><h2>Assigned to Me</h2><span id="as-count" style="font-size:13px;color:var(--t3)"></span></div>
+      <div class="tll">
+        <div class="tll-left"><div id="as-list"></div></div>
+        <div class="tll-right"><div id="dp-assigned" class="dp hid"></div></div>
+      </div>`;
+  }
+  const countEl=el.querySelector('#as-count');
+  if(countEl) countEl.textContent=active.length+' active';
+  const list=el.querySelector('#as-list');
+  if(!list) return;
+  if(active.length===0&&done.length===0){
+    list.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><div class="empty-t">Nothing assigned to you</div><p>Tickets assigned to you appear here</p></div>`;
+  } else {
+    list.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
+      ${active.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Active (${active.length})</div><div class="tkl">${active.map(t=>tkCard(t,'dp-assigned',true)).join('')}</div></div>`:''}
+      ${done.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Completed (${done.length})</div><div class="tkl">${done.map(t=>tkCard(t,'dp-assigned',true)).join('')}</div></div>`:''}
     </div>`;
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -1032,22 +1047,29 @@ function pMyReqs(el){
   const uid=CU.uid;
   const active=tickets.filter(t=>t.createdBy===uid&&!['resolved','closed','archived'].includes(t.status));
   const done=tickets.filter(t=>t.createdBy===uid&&['resolved','closed','archived'].includes(t.status));
-  el.innerHTML=`
-    <div class="ph"><h2>My Requests</h2>
-      <span style="font-size:13px;color:var(--t3)">${active.length} active</span>
-      <button class="btn pr" onclick="nav('newticket')"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 010 2H9v4a1 1 0 01-2 0V9H3a1 1 0 010-2h4V3a1 1 0 011-1z"/></svg>New Request</button>
-    </div>
-    <div class="tll">
-      <div class="tll-left">
-        ${active.length===0&&done.length===0
-          ?`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><div class="empty-t">No requests yet</div><button class="btn pr sm" style="margin-top:10px" onclick="nav('newticket')">Submit a Request</button></div>`
-          :`<div style="display:flex;flex-direction:column;gap:16px">
-            ${active.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Active (${active.length})</div><div class="tkl">${active.map(t=>tkCard(t,'dp-myrequests',false)).join('')}</div></div>`:''}
-            ${done.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Completed (${done.length})</div><div class="tkl">${done.map(t=>tkCard(t,'dp-myrequests',false)).join('')}</div></div>`:''}
-          </div>`}
+  if(!el.querySelector('#dp-myrequests')){
+    el.innerHTML=`
+      <div class="ph"><h2>My Requests</h2>
+        <span id="mr-count" style="font-size:13px;color:var(--t3)"></span>
+        <button class="btn pr" onclick="nav('newticket')"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 010 2H9v4a1 1 0 01-2 0V9H3a1 1 0 010-2h4V3a1 1 0 011-1z"/></svg>New Request</button>
       </div>
-      <div class="tll-right"><div id="dp-myrequests" class="dp hid"></div></div>
+      <div class="tll">
+        <div class="tll-left"><div id="mr-list"></div></div>
+        <div class="tll-right"><div id="dp-myrequests" class="dp hid"></div></div>
+      </div>`;
+  }
+  const countEl=el.querySelector('#mr-count');
+  if(countEl) countEl.textContent=active.length+' active';
+  const list=el.querySelector('#mr-list');
+  if(!list) return;
+  if(active.length===0&&done.length===0){
+    list.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><div class="empty-t">No requests yet</div><button class="btn pr sm" style="margin-top:10px" onclick="nav('newticket')">Submit a Request</button></div>`;
+  } else {
+    list.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
+      ${active.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Active (${active.length})</div><div class="tkl">${active.map(t=>tkCard(t,'dp-myrequests',false)).join('')}</div></div>`:''}
+      ${done.length?`<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Completed (${done.length})</div><div class="tkl">${done.map(t=>tkCard(t,'dp-myrequests',false)).join('')}</div></div>`:''}
     </div>`;
+  }
 }
 
 function tkCard(t,dpId,showFrom){
@@ -1076,15 +1098,15 @@ function tkCard(t,dpId,showFrom){
 // ══════════════════════════════════════════════════
 async function openDetail(id, dpId){
   selId=id;
-  // Highlight selected row
   document.querySelectorAll('.tkr').forEach(r=>r.classList.remove('on'));
   document.querySelectorAll(`.tkr[onclick*="'${id}'"]`).forEach(r=>r.classList.add('on'));
-  // Close other panels
   document.querySelectorAll('.dp').forEach(d=>{if(d.id!==dpId)d.classList.add('hid');});
-  const dp=G(dpId); if(!dp)return;
+  const dp=G(dpId);
+  if(!dp){ console.warn('Detail panel not found:',dpId); return; }
   dp.classList.remove('hid');
   dp.innerHTML='<div class="ld"><div class="sp"></div></div>';
-  await renderDetail(id,dpId);
+  try{ await renderDetail(id,dpId); }
+  catch(e){ console.error('renderDetail error:',e); dp.innerHTML=`<div style="padding:20px;color:var(--re);font-size:13px">Error loading ticket: ${e.message}</div>`; }
 }
 async function renderDetail(id,dpId){
   const t=tickets.find(x=>x.id===id);
@@ -1093,6 +1115,7 @@ async function renderDetail(id,dpId){
   const ass=users.find(u=>u.id===t.assignedTo);
   const role=CP.role;
   const canM=['admin','manager','agent'].includes(role);
+  const isOwner=t.createdBy===CU.uid; // requester: can reply + edit details, not manage
   const cmts=(t.comments||[]).sort((a,b)=>(a.createdAt?.toDate?.()?.getTime()||0)-(b.createdAt?.toDate?.()?.getTime()||0));
   const attHTML=(t.attachments||[]).length?`<div class="sl" style="margin-top:12px">Attachments</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${(t.attachments||[]).map(a=>
@@ -1102,9 +1125,11 @@ async function renderDetail(id,dpId){
   dp.innerHTML=`
     <div class="dph">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="min-width:0">
+        <div style="min-width:0;flex:1">
           <div class="dpid">${t.ticketNumber||t.id.slice(-8)} · ${dept?.name||'No Dept'}</div>
-          <div class="dptt">${t.subject}</div>
+          ${isOwner&&!['resolved','closed','archived'].includes(t.status)
+            ?`<input id="dp-subj-${id}" type="text" value="${t.subject.replace(/"/g,'&quot;')}" style="width:100%;font-size:13.5px;font-weight:600;border:none;border-bottom:1.5px solid var(--b1);background:none;outline:none;padding:2px 0;color:var(--t1);letter-spacing:-.3px" onblur="saveSubject('${id}',this.value,'${dpId}')" placeholder="Subject">`
+            :`<div class="dptt">${t.subject}</div>`}
         </div>
         <button class="btn ic" style="flex-shrink:0" onclick="selId=null;document.querySelectorAll('.dp').forEach(d=>d.classList.add('hid'));if(curPanel==='tickets')relistTk();else renderPanel(curPanel)">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4.3 4.3a1 1 0 011.4 0L8 6.6l2.3-2.3a1 1 0 111.4 1.4L9.4 8l2.3 2.3a1 1 0 01-1.4 1.4L8 9.4l-2.3 2.3a1 1 0 01-1.4-1.4L6.6 8 4.3 5.7a1 1 0 010-1.4z"/></svg>
@@ -1122,7 +1147,9 @@ async function renderDetail(id,dpId){
         <div class="mi"><label>Opened</label><div class="vl" style="font-size:12px;color:var(--t3)">${fmtDate(t.createdAt)}</div></div>
       </div>
       <div class="sl">Description</div>
-      <div class="desc-box">${t.description||'<em style="color:var(--t3)">No description.</em>'}</div>
+      ${isOwner&&!['resolved','closed','archived'].includes(t.status)
+        ?`<textarea id="dp-desc-${id}" rows="4" style="width:100%;padding:9px 10px;border:1.5px solid var(--b1);border-radius:var(--r);font-size:13px;resize:vertical;outline:none;background:var(--s1);color:var(--t1);line-height:1.5;margin-bottom:13px" onblur="saveDesc('${id}',this.value,'${dpId}')" placeholder="Description">${t.description||''}</textarea>`
+        :`<div class="desc-box">${t.description||'<em style="color:var(--t3)">No description.</em>'}</div>`}
       ${attHTML}
       <div class="sl">Activity (${cmts.length})</div>
       <div class="tline">
@@ -1155,6 +1182,13 @@ async function renderDetail(id,dpId){
 }
 async function updTk(id,field,val,dpId){
   const t=tickets.find(x=>x.id===id); if(!t)return;
+  // Permission guard — enforce server-side equivalent in client
+  const canManage=['admin','manager','agent'].includes(CP?.role);
+  const restrictedFields=['status','priority','assignedTo','departmentId'];
+  if(restrictedFields.includes(field)&&!canManage){
+    toast('You do not have permission to change '+field,'er');
+    return;
+  }
   const old=t[field];
   await db.collection('tickets').doc(id).update({[field]:val,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
   if(old!==val){
@@ -1175,6 +1209,11 @@ async function updTk(id,field,val,dpId){
 }
 async function addComment(id,type,dpId){
   const ta=G('rp-'+id); const text=ta?.value?.trim(); if(!text)return;
+  // Only managers+ can add internal notes
+  if(type==='note'&&!['admin','manager','agent'].includes(CP?.role)){
+    toast('You do not have permission to add internal notes','er');
+    return;
+  }
   await db.collection('tickets').doc(id).update({
     comments:firebase.firestore.FieldValue.arrayUnion({text,type,authorName:CP.displayName||CP.email,authorId:CU.uid,createdAt:firebase.firestore.Timestamp.now()}),
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -1325,6 +1364,30 @@ function sendEmail(to,num,subj,prio,dept){
     s.onload=go; s.onerror=()=>toast('Could not load EmailJS','er');
     document.head.appendChild(s);
   }
+}
+
+// Save subject/description edits by requester
+async function saveSubject(id, val, dpId){
+  const v=val.trim(); if(!v)return;
+  const t=tickets.find(x=>x.id===id); if(!t||t.subject===v)return;
+  await db.collection('tickets').doc(id).update({
+    subject:v,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    comments:firebase.firestore.FieldValue.arrayUnion({
+      text:'Subject updated',type:'action',
+      authorName:CP.displayName||CP.email,authorId:CU.uid,
+      createdAt:firebase.firestore.Timestamp.now()
+    })
+  });
+  toast('Subject updated','ok');
+}
+async function saveDesc(id, val, dpId){
+  const t=tickets.find(x=>x.id===id); if(!t||t.description===val.trim())return;
+  await db.collection('tickets').doc(id).update({
+    description:val.trim(),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  toast('Description updated','ok');
 }
 
 // ══════════════════════════════════════════════════
