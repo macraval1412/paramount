@@ -728,15 +728,41 @@ function loadData(){
       if(curPanel==='admin')rPanel('admin');
     });
   }
-  let q=db.collection('tickets').orderBy('createdAt','desc');
-  if(role==='user')q=q.where('createdBy','==',CU.uid);
-  else if(role==='manager'){const d=CP.departmentId;if(d)q=q.where('departmentId','==',d);}
-  q.onSnapshot(s=>{
-    const newTickets=s.docs.map(d=>({id:d.id,...d.data()}));
-    checkTicketChanges(newTickets);
-    tickets=newTickets;
-    if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
-  });
+  // For managers: run TWO queries - dept tickets + personally assigned tickets
+  // Merge results so they see everything relevant to them
+  if(role==='user'){
+    db.collection('tickets').where('createdBy','==',CU.uid).orderBy('createdAt','desc')
+      .onSnapshot(s=>{
+        const t=s.docs.map(d=>({id:d.id,...d.data()}));
+        checkTicketChanges(t); tickets=t;
+        if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
+      });
+  } else if(role==='manager'){
+    const deptId=CP.departmentId;
+    // Listen to tickets in their department
+    let deptTickets=[], assignedTickets=[];
+    const mergeAndUpdate=()=>{
+      const merged=Object.values(
+        [...deptTickets,...assignedTickets].reduce((acc,t)=>{acc[t.id]=t;return acc;},{})
+      ).sort((a,b)=>(b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0));
+      checkTicketChanges(merged); tickets=merged;
+      if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
+    };
+    if(deptId){
+      db.collection('tickets').where('departmentId','==',deptId).orderBy('createdAt','desc')
+        .onSnapshot(s=>{deptTickets=s.docs.map(d=>({id:d.id,...d.data()}));mergeAndUpdate();});
+    }
+    // Also get tickets directly assigned to this manager (from any dept)
+    db.collection('tickets').where('assignedTo','==',CU.uid).orderBy('createdAt','desc')
+      .onSnapshot(s=>{assignedTickets=s.docs.map(d=>({id:d.id,...d.data()}));mergeAndUpdate();});
+  } else {
+    // Admin and agent see all tickets
+    db.collection('tickets').orderBy('createdAt','desc').onSnapshot(s=>{
+      const t=s.docs.map(d=>({id:d.id,...d.data()}));
+      checkTicketChanges(t); tickets=t;
+      if(['tickets','dashboard','reports'].includes(curPanel))rPanel(curPanel);
+    });
+  }
   if(['admin','manager'].includes(role))doArchive();
 }
 async function doArchive(){
@@ -1096,7 +1122,7 @@ async function submitTk(){
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     };
     const ref=await db.collection('tickets').add(tk);
-    if(autoAssigned&&dept&&cfg.emailNotify!==false){
+    if(autoAssigned&&dept&&cfg.emailNotify===true){
       const mgrEm=dept.managerEmail||(users.find(u=>u.id===assignedTo)?.email);
       if(mgrEm)sendEm(mgrEm,tk.ticketNumber,subj,tk.priority,dept.name);
     }
@@ -1108,7 +1134,7 @@ function sendEm(to,num,subj,prio,dept){
   const sid=cfg.emailjsServiceId,tid=cfg.emailjsTemplateId,key=cfg.emailjsPublicKey;
   if(sid&&tid&&key){
     const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-    s.onload=()=>{emailjs.init(key);emailjs.send(sid,tid,{to_email:to,ticket_number:num,subject:subj,priority:prio,department:dept}).then(()=>toast('Manager notified','ok')).catch(e=>console.warn('EmailJS:',e));};
+    s.onload=()=>{emailjs.init(key);emailjs.send(sid,tid,{to_email:to,ticket_number:num,subject:subj,priority:prio,department:dept,app_url:window.location.href,org_name:cfg.orgName||'DeskFlow'}).then(()=>toast('Manager notified','ok')).catch(e=>console.warn('EmailJS:',e));};
     document.head.appendChild(s);
   }else{
     console.info(`📧 NOTIFY → ${to}: [${prio.toUpperCase()}] ${num} — ${subj} (${dept})`);
@@ -1228,10 +1254,10 @@ function admAssign(c){c.innerHTML=`<div class="card"><div class="chd"><h3>Ticket
   <button class="btn pr" onclick="saveSCfg({assignMode:G('asmode').value})">Save</button>
 </div></div>`;}
 function admEmail(c){c.innerHTML=`<div class="card"><div class="chd"><h3>Email Notifications</h3></div><div class="cbd">
-  <div class="tgw"><button class="tg${cfg.emailNotify!==false?' on':''}" id="tgem" onclick="this.classList.toggle('on')"></button><span style="font-size:13px;color:var(--tx2)">Notify dept manager on new ticket assignment</span></div>
+  <div class="tgw"><button class="tg${cfg.emailNotify===true?' on':''}" id="tgem" onclick="this.classList.toggle('on');this.style.background=this.classList.contains('on')?'var(--ac)':'var(--bor2)'"></button><span style="font-size:13px;color:var(--tx2)">Notify dept manager on new ticket assignment</span></div>
   <div class="dvd"></div>
   <p style="font-size:13px;font-weight:500;margin-bottom:8px">EmailJS Integration <span style="font-weight:400;font-size:12px;color:var(--tx3)">(free: 200/month)</span></p>
-  <div class="ms in">Register at <a href="https://emailjs.com" target="_blank" style="color:var(--ac)">emailjs.com</a>. Template vars: <code>to_email</code> <code>ticket_number</code> <code>subject</code> <code>priority</code> <code>department</code></div>
+  <div class="ms in">Register at <a href="https://emailjs.com" target="_blank" style="color:var(--ac)">emailjs.com</a>. Template variables to use: <code>to_email</code> <code>ticket_number</code> <code>subject</code> <code>priority</code> <code>department</code> <code>org_name</code> <code>app_url</code><br><br><strong>To activate:</strong> 1) Toggle ON above 2) Fill in all 3 IDs below 3) Click Save</div>
   <div class="fr" style="margin-top:10px">
     <div class="fg"><label>Service ID</label><input type="text" id="ejs" value="${cfg.emailjsServiceId||''}" placeholder="service_abc"></div>
     <div class="fg"><label>Template ID</label><input type="text" id="ejt" value="${cfg.emailjsTemplateId||''}" placeholder="template_xyz"></div>
